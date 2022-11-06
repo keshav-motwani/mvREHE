@@ -17,7 +17,7 @@ double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L
 
     List Y_tilde_list_j = Y_tilde_list[j];
 
-    for (R_xlen_t m = 0; m <= j; m++) {
+    for (R_xlen_t m = 0; m < q; m++) {
 
       NumericVector Y_ = Y_tilde_list_j[m];
       arma::vec Y(Y_.begin(), Y_.size(), false, true);
@@ -36,7 +36,7 @@ double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L
 
   }
 
-  return value;
+  return value / (X_tilde.n_rows * q * q);
 
 }
 
@@ -71,7 +71,7 @@ void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const L
         arma::mat L(L_.begin(), L_.nrow(), L_.ncol(), false);
         NumericMatrix grad_ = gradient_list[z];
         arma::mat grad(grad_.begin(), grad_.nrow(), grad_.ncol(), false);
-        grad(a, b) = -4 * L(a, b) * ZtR;
+        grad(a, b) = -4 * L(a, b) * ZtR / (X_tilde.n_rows * q * q);
       }
     }
   }
@@ -95,7 +95,7 @@ void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const L
             arma::mat L(L_.begin(), L_.nrow(), L_.ncol(), false);
             NumericMatrix grad_ = gradient_list[z];
             arma::mat grad(grad_.begin(), grad_.nrow(), grad_.ncol(), false);
-            grad(a, b) += -2 * L(m, b) * ZtR;
+            grad(a, b) += -4 * L(m, b) * ZtR / (X_tilde.n_rows * q * q);
           }
         }
       }
@@ -120,7 +120,7 @@ void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const L
           arma::mat L(L_.begin(), L_.nrow(), L_.ncol(), false);
           NumericMatrix grad_ = gradient_list[z];
           arma::mat grad(grad_.begin(), grad_.nrow(), grad_.ncol(), false);
-          grad(a, b) += -2 * L(j, b) * ZtR;
+          grad(a, b) += -4 * L(j, b) * ZtR / (X_tilde.n_rows * q * q);
         }
       }
     }

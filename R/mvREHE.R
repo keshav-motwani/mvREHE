@@ -32,7 +32,6 @@ mvREHE = function(Y, D_list, tolerance = 1e-9, max_iter = 10000, L_init_list = N
 
   if (algorithm == "GD") {
     objective = fit_GD(Y_tilde_list, X_tilde, max_iter, tolerance, L_list, gradient_list)
-    print(gradient_list)
   } else if (algorithm %in% c("L-BFGS-B")) {
     fit = fit_optim(Y_tilde_list, X_tilde, max_iter, L_list, algorithm)
     L_list = fit$L_list
