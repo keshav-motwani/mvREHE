@@ -17,7 +17,7 @@ double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L
 
     List Y_tilde_list_j = Y_tilde_list[j];
 
-    for (R_xlen_t m = 0; m < q; m++) {
+    for (R_xlen_t m = 0; m <= j; m++) {
 
       NumericVector Y_ = Y_tilde_list_j[m];
       arma::vec Y(Y_.begin(), Y_.size(), false, true);
@@ -30,7 +30,50 @@ double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L
         sigma[k] = arma::dot(L.row(j).subvec(0, std::min(j, m)), L.row(m).subvec(0, std::min(j, m)));
       }
 
-      value += arma::accu(arma::pow(Y - (X_tilde * sigma), 2));
+      if (j == m) {
+        value += arma::accu(arma::pow(Y - (X_tilde * sigma), 2));
+      } else {
+        value += 2 * arma::accu(arma::pow(Y - (X_tilde * sigma), 2));
+      }
+
+    }
+
+  }
+
+  return value / (X_tilde.n_rows * q * q);
+
+}
+
+// [[Rcpp::export]]
+double loss2(const List & Y_tilde_list, const arma::mat & X_tilde, const List & Sigma_list) {
+
+  double value = 0;
+
+  R_xlen_t K = X_tilde.n_cols;
+  R_xlen_t q = Y_tilde_list.size();
+
+  for (R_xlen_t j = 0; j < q; j++) {
+
+    List Y_tilde_list_j = Y_tilde_list[j];
+
+    for (R_xlen_t m = 0; m <= j; m++) {
+
+      NumericVector Y_ = Y_tilde_list_j[m];
+      arma::vec Y(Y_.begin(), Y_.size(), false, true);
+
+      arma::vec sigma(K);
+      sigma.zeros();
+      for (R_xlen_t k = 0; k < K; k++) {
+        NumericMatrix Sigma_ = Sigma_list[k];
+        arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false) ;
+        sigma[k] = Sigma(j, m);
+      }
+
+      if (j == m) {
+        value += arma::accu(arma::pow(Y - (X_tilde * sigma), 2));
+      } else {
+        value += 2 * arma::accu(arma::pow(Y - (X_tilde * sigma), 2));
+      }
 
     }
 
