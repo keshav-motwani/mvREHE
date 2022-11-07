@@ -18,7 +18,7 @@ mvLRHE = function(Y, D_list, r, tolerance = 1e-9, max_iter = 10000, Sigma_init_l
 
   if (is.null(Sigma_init_list)) {
     Sigma_list = lapply(1:length(D_list), function(i) clusterGeneration::rcorrmatrix(q))
-  } else if (is.character(Sigma_init_list) && L_init_list == "mvHE") {
+  } else if (is.character(Sigma_init_list) && Sigma_init_list == "mvHE") {
     Sigma_list = mvHE(Y, D_list)$Sigma_hat
   } else {
     Sigma_list = Sigma_init_list
