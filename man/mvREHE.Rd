@@ -10,7 +10,7 @@ mvREHE(
   tolerance = 1e-09,
   max_iter = 10000,
   L_init_list = NULL,
-  algorithm = "GD"
+  algorithm = "L-BFGS-B"
 )
 }
 \arguments{

@@ -11,7 +11,7 @@
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, tolerance = 1e-9, max_iter = 10000, L_init_list = NULL, algorithm = "GD") {
+mvREHE = function(Y, D_list, tolerance = 1e-9, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
 
   q = ncol(Y)
   objective = numeric(max_iter)
@@ -26,7 +26,7 @@ mvREHE = function(Y, D_list, tolerance = 1e-9, max_iter = 10000, L_init_list = N
     L_list = L_init_list
   }
 
-  Y_tilde_list = lapply(1:q, function(j) lapply(1:q, function(m) c(tcrossprod(Y[, j], Y[, m]))))
+  Y_tilde_list = lapply(1:q, function(j) lapply(1:j, function(m) c(tcrossprod(Y[, j], Y[, m]))))
   X_tilde = do.call(cbind, lapply(D_list, function(D) c(D)))
   gradient_list = replicate(length(D_list), matrix(0, q, q), simplify = FALSE)
 

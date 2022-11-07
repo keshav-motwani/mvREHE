@@ -5,6 +5,10 @@ loss <- function(Y_tilde_list, X_tilde, L_list) {
     .Call('_mvREHE_loss', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, L_list)
 }
 
+loss2 <- function(Y_tilde_list, X_tilde, Sigma_list) {
+    .Call('_mvREHE_loss2', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, Sigma_list)
+}
+
 gradient_full <- function(Y_tilde_list, X_tilde, L_list, gradient_list) {
     invisible(.Call('_mvREHE_gradient_full', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, L_list, gradient_list))
 }
