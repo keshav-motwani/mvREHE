@@ -31,7 +31,10 @@ make_low_rank = function(A, r) {
 
   eig = eigen(A)
   eig$val[setdiff(1:nrow(A), 1:r)] = 0
-  eig$vec %*% diag(eig$val) %*% t(eig$vec)
+  A = eig$vec %*% diag(eig$val) %*% t(eig$vec)
+  attr(A, "sqrt") = eig$vec %*% diag(sqrt(eig$val)) %*% t(eig$vec)
+
+  A
 
 }
 
@@ -55,10 +58,8 @@ simulation = function(n, q) {
 
   chol_D_1 = chol(D_1)
   chol_D_0 = chol(D_0)
-  e1 = eigen(Sigma_1)
-  sqrt_Sigma_1 = e1$vec %*% diag(sqrt(e1$val)) %*% t(e1$vec)
-  e0 = eigen(Sigma_0)
-  sqrt_Sigma_0 = e0$vec %*% diag(sqrt(e0$val)) %*% t(e0$vec)
+  sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
+  sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
 
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_1)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
