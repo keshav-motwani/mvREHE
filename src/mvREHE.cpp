@@ -6,7 +6,7 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list) {
+double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list, double lambda) {
 
   double value = 0;
 
@@ -40,7 +40,15 @@ double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L
 
   }
 
-  return value / (X_tilde.n_rows * q * q);
+  value = value / (X_tilde.n_rows * q * q);
+
+  for (R_xlen_t k = 0; k < K; k++) {
+    NumericMatrix L_ = L_list[k];
+    arma::mat L(L_.begin(), L_.nrow(), L_.ncol(), false) ;
+    value += lambda / 2 * arma::accu(arma::square(L));
+  }
+
+  return value;
 
 }
 
@@ -84,7 +92,7 @@ double loss2(const List & Y_tilde_list, const arma::mat & X_tilde, const List & 
 }
 
 // [[Rcpp::export]]
-void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list, List & gradient_list) {
+void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list, List & gradient_list, double lambda) {
 
   double value = 0;
 
@@ -169,10 +177,18 @@ void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const L
     }
   }
 
+  for (R_xlen_t k = 0; k < K; k++) {
+    NumericMatrix grad_ = gradient_list[k];
+    arma::mat grad(grad_.begin(), grad_.nrow(), grad_.ncol(), false);
+    NumericMatrix L_ = L_list[k];
+    arma::mat L(L_.begin(), L_.nrow(), L_.ncol(), false);
+    grad += lambda * L;
+  }
+
 }
 
 // [[Rcpp::export]]
-arma::vec fit_GD(const List & Y_tilde_list, const arma::mat & X_tilde, int max_iter, double tolerance, List & L_list, List & gradient_list) {
+arma::vec fit_GD(const List & Y_tilde_list, const arma::mat & X_tilde, double lambda, int max_iter, double tolerance, List & L_list, List & gradient_list) {
 
   arma::colvec objective(max_iter);
   objective.zeros();
@@ -198,8 +214,8 @@ arma::vec fit_GD(const List & Y_tilde_list, const arma::mat & X_tilde, int max_i
       L_old = L;
     }
 
-    loss_old = loss(Y_tilde_list, X_tilde, L_list_old);
-    gradient_full(Y_tilde_list, X_tilde, L_list_old, gradient_list);
+    loss_old = loss(Y_tilde_list, X_tilde, L_list_old, lambda);
+    gradient_full(Y_tilde_list, X_tilde, L_list_old, gradient_list, lambda);
 
     step_size = step_size * 2;
     bool line_search = true;
@@ -217,7 +233,7 @@ arma::vec fit_GD(const List & Y_tilde_list, const arma::mat & X_tilde, int max_i
         L = L_old - step_size * grad;
         rhs = rhs - 0.5 * step_size * arma::accu(arma::pow(grad, 2));
       }
-      lhs = loss(Y_tilde_list, X_tilde, L_list);
+      lhs = loss(Y_tilde_list, X_tilde, L_list, lambda);
       if (std::isnan(lhs) | std::isnan(rhs) | (lhs > rhs)) {
         step_size = 0.5 * step_size;
       } else {
@@ -226,7 +242,7 @@ arma::vec fit_GD(const List & Y_tilde_list, const arma::mat & X_tilde, int max_i
 
     }
 
-    objective(i) = loss(Y_tilde_list, X_tilde, L_list);
+    objective(i) = loss(Y_tilde_list, X_tilde, L_list, lambda);
 
     if (i > 1 && ((objective(i - 1) - objective(i)) / objective(i - 1)) < tolerance) {
       break;

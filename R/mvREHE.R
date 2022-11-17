@@ -2,6 +2,10 @@
 #'
 #' @param Y
 #' @param D_list
+#' @param K
+#' @param n_lambda
+#' @param lambda_max
+#' @param lambda_min
 #' @param tolerance
 #' @param max_iter
 #' @param L_init_list
@@ -11,7 +15,78 @@
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, tolerance = 1e-9, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
+cv_mvREHE = function(Y, D_list, K, n_lambda = 10, lambda_max = 1, lambda_min = 1e-8, tolerance = 1e-9, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
+
+  folds = split(sample(1:nrow(Y), nrow(Y)), 1:K)
+
+  q = ncol(Y)
+  lambda_seq = c(log_seq(lambda_max, lambda_min, n_lambda), 0) # / (q * (q - 1) / 2)
+
+  L_init_list_orig = L_init_list
+
+  loss = numeric(length(lambda_seq))
+
+  for (l in 1:length(lambda_seq)) {
+
+    print(l)
+
+    loss_l = 0
+
+    for (k in 1:K) {
+
+      print(k)
+
+      D_list_mk = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
+      Sigma_hat = mvREHE(Y[-folds[[k]], ], D_list_mk, lambda_seq[l], tolerance, max_iter, L_init_list, algorithm)$Sigma_hat
+
+      Y_tilde_list_k = lapply(1:q, function(j) lapply(1:j, function(m) c(tcrossprod(Y[folds[[k]], j], Y[folds[[k]], m]))))
+      X_tilde_k = do.call(cbind, lapply(D_list, function(D) c(D[folds[[k]], folds[[k]]])))
+
+      loss_l = loss_l + length(folds[[k]])^2 * mvREHE:::loss2(Y_tilde_list_k, X_tilde_k, Sigma_hat)
+
+      # L_init_list = lapply(Sigma_hat, function(x) t(chol(x, pivot = TRUE)))
+
+    }
+
+    loss[l] = loss_l
+
+  }
+
+  lambda = lambda_seq[which.min(loss)]
+
+  result = mvREHE(Y, D_list, lambda, tolerance, max_iter, L_init_list_orig, algorithm)
+  result$cv_loss = loss
+  result$lambda = lambda
+
+  result
+
+}
+
+log_seq = function(from, to, length) {
+
+  sequence = exp(seq(log(from), log(to), length.out = length))
+
+  sequence[1] = from
+  if (length > 1) sequence[length] = to
+
+  sequence
+
+}
+
+#' mvREHE
+#'
+#' @param Y
+#' @param D_list
+#' @param tolerance
+#' @param max_iter
+#' @param L_init_list
+#' @param algorithm
+#'
+#' @return
+#' @export
+#'
+#' @examples
+mvREHE = function(Y, D_list, lambda = 0, tolerance = 1e-9, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
 
   q = ncol(Y)
   objective = numeric(max_iter)
@@ -31,9 +106,9 @@ mvREHE = function(Y, D_list, tolerance = 1e-9, max_iter = 10000, L_init_list = N
   gradient_list = replicate(length(D_list), matrix(0, q, q), simplify = FALSE)
 
   if (algorithm == "GD") {
-    objective = fit_GD(Y_tilde_list, X_tilde, max_iter, tolerance, L_list, gradient_list)
+    objective = fit_GD(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, gradient_list)
   } else if (algorithm %in% c("L-BFGS-B")) {
-    fit = fit_optim(Y_tilde_list, X_tilde, max_iter, L_list, algorithm)
+    fit = fit_optim(Y_tilde_list, X_tilde, lambda, max_iter, L_list, algorithm)
     L_list = fit$L_list
     objective = fit$objective
   }

@@ -56,14 +56,10 @@ simulation = function(n, q) {
   Sigma_init_list = lapply(1:2, function(i) clusterGeneration::rcorrmatrix(q))
   L_init_list = lapply(Sigma_init_list, function(i) t(chol(i)))
   mvHE_time = system.time({mvHE_estimate = mvREHE::mvHE(Y, list(D_0, D_1))})[3]
-  mvREHE_time = system.time({mvREHE_estimate = mvREHE::mvREHE(Y, list(D_0, D_1), L_init_list = "mvHE", algorithm = "L-BFGS-B")})[3]
-  mvLRHE_time = system.time({mvLRHE_estimate = mvLRHE(Y, list(D_0, D_1), q, Sigma_init_list = "mvHE")})[3]
-  if (q > 10) {
-    mvLRHE10_time = system.time({mvLRHE10_estimate = mvLRHE(Y, list(D_0, D_1), 10, Sigma_init_list = "mvHE")})[3]
-  } else {
-    mvLRHE10_time = NA
-    mvLRHE10_estimate = NULL
-  }
+  mvREHE_time = system.time({mvREHE_estimate = mvREHE::mvREHE(Y, list(D_0, D_1), lambda = 0, L_init_list = "mvHE", algorithm = "L-BFGS-B")})[3]
+  cv_mvREHE_time = system.time({cv_mvREHE_estimate = mvREHE::cv_mvREHE(Y, list(D_0, D_1), K = 5, L_init_list = "mvHE", algorithm = "L-BFGS-B")})[3]
+  mvLRHE_time = system.time({mvLRHE_estimate = mvLRHE(Y, list(D_0, D_1), r = q, Sigma_init_list = "mvHE")})[3]
+  cv_mvLRHE_time = system.time({cv_mvLRHE_estimate = cv_mvLRHE(Y, list(D_0, D_1), K = 5, Sigma_init_list = "mvHE")})[3]
   if (FALSE) {# q <= 5 & n <= 400) {
     mvREML_time = system.time({mvREML_estimate = mvREML(Y, D_0, D_1)})[3]
   } else {
@@ -72,12 +68,12 @@ simulation = function(n, q) {
   }
   naive = list(Sigma_hat = list(clusterGeneration::rcorrmatrix(q), clusterGeneration::rcorrmatrix(q)))
 
-  return(list(time = c(mvHE = mvHE_time, mvREHE = mvREHE_time, mvLRHE = mvLRHE_time, mvLRHE10 = mvLRHE10_time, mvREML = mvREML_time),
+  return(list(time = c(mvHE = mvHE_time, mvREHE = mvREHE_time, cv_mvREHE = cv_mvREHE_time, mvLRHE = mvLRHE_time, cv_mvLRHE = cv_mvLRHE_time, mvREML = mvREML_time),
               truncated = 1 * c(attr(mvHE_estimate$Sigma_hat[[1]], "truncated"), attr(mvHE_estimate$Sigma_hat[[2]], "truncated")),
               min_eigenvalue = c(attr(mvHE_estimate$Sigma_hat[[1]], "min_eigenvalue"), attr(mvHE_estimate$Sigma_hat[[2]], "min_eigenvalue")),
-              squared_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, mvLRHE = mvLRHE_estimate, mvLRHE10 = mvLRHE10_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(squared_error(Sigma_0, estimate$Sigma_hat[[1]]), squared_error(Sigma_1, estimate$Sigma_hat[[2]]))),
-              spectral_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, mvLRHE = mvLRHE_estimate, mvLRHE10 = mvLRHE10_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(spectral_error(Sigma_0, estimate$Sigma_hat[[1]]), spectral_error(Sigma_1, estimate$Sigma_hat[[2]]))),
-              EV1_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, mvLRHE = mvLRHE_estimate, mvLRHE10 = mvLRHE10_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(EV1_error(Sigma_0, estimate$Sigma_hat[[1]]), EV1_error(Sigma_1, estimate$Sigma_hat[[2]])))))
+              squared_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, cv_mvREHE = cv_mvREHE_estimate, mvLRHE = mvLRHE_estimate, cv_mvLRHE = cv_mvLRHE_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(squared_error(Sigma_0, estimate$Sigma_hat[[1]]), squared_error(Sigma_1, estimate$Sigma_hat[[2]]))),
+              spectral_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, cv_mvREHE = cv_mvREHE_estimate, mvLRHE = mvLRHE_estimate, cv_mvLRHE = cv_mvLRHE_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(spectral_error(Sigma_0, estimate$Sigma_hat[[1]]), spectral_error(Sigma_1, estimate$Sigma_hat[[2]]))),
+              EV1_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, cv_mvREHE = cv_mvREHE_estimate, mvLRHE = mvLRHE_estimate, cv_mvLRHE = cv_mvLRHE_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(EV1_error(Sigma_0, estimate$Sigma_hat[[1]]), EV1_error(Sigma_1, estimate$Sigma_hat[[2]])))))
 
 }
 
@@ -102,6 +98,7 @@ q = grid[PARAMETER_ID, "q"]
 experiment = grid[PARAMETER_ID, "experiment"]
 
 set.seed(replicate, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
+debugonce(simulation)
 output = simulation(n, q)
 
 spectral_error = list()

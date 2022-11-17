@@ -1,4 +1,4 @@
-fit_optim = function(Y_tilde_list, X_tilde, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
+fit_optim = function(Y_tilde_list, X_tilde, lambda, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
 
   library(optimx)
 
@@ -14,7 +14,7 @@ fit_optim = function(Y_tilde_list, X_tilde, max_iter = 10000, L_init_list = NULL
       cov_mat
     }, simplify = F)
 
-    value = loss(Y_tilde_list, X_tilde, L_list)
+    value = loss(Y_tilde_list, X_tilde, L_list, lambda)
 
     return(value)
   }
@@ -29,7 +29,7 @@ fit_optim = function(Y_tilde_list, X_tilde, max_iter = 10000, L_init_list = NULL
     }, simplify = F)
 
     gradient_list = replicate(K, matrix(0, q, q), simplify = FALSE)
-    gradient_full(Y_tilde_list, X_tilde, L_list, gradient_list)
+    gradient_full(Y_tilde_list, X_tilde, L_list, gradient_list, lambda)
 
     sapply(gradient_list, function(cov_mat){
       cov_mat[lower.tri(cov_mat, diag=TRUE)]
