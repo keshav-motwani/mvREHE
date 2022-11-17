@@ -1,6 +1,6 @@
 library(mvREHE)
 
-RESULT_PATH = "results/"
+RESULT_PATH = "results_cv_lr/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 squared_error = function(A, B) {
@@ -30,7 +30,7 @@ EV1_error = function(A, B) {
 make_low_rank = function(A, r) {
 
   eig = eigen(A)
-  eig$val[(r + 1):length(eig$val)] = 0
+  eig$val[setdiff(1:nrow(A), 1:r)] = 0
   eig$vec %*% diag(eig$val) %*% t(eig$vec)
 
 }
