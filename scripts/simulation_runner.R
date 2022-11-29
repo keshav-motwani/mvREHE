@@ -1,6 +1,6 @@
 library(mvREHE)
 
-RESULT_PATH = "results_cv_lr/"
+RESULT_PATH = "results_cv_lr_again/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 squared_error = function(A, B) {
@@ -38,9 +38,14 @@ make_low_rank = function(A, r) {
 
 }
 
-simulation = function(n, q) {
+sqrt_matrix = function(A) {
 
-  r = ifelse(q > 10, round(q / 2), q)
+  eig = eigen(A)
+  eig$vec %*% diag(sqrt(eig$val)) %*% t(eig$vec)
+
+}
+
+simulation = function(n, q) {
 
   D_1 = matrix(nrow = n, ncol = n)
   for (i in 1:n) {
@@ -53,13 +58,13 @@ simulation = function(n, q) {
 
   colnames(D_0) = colnames(D_1) = rownames(D_0) = rownames(D_1) = as.character(1:n)
 
-  Sigma_1 = make_low_rank(clusterGeneration::rcorrmatrix(q), r)
-  Sigma_0 = make_low_rank(clusterGeneration::rcorrmatrix(q), r)
+  Sigma_1 = clusterGeneration::rcorrmatrix(q)
+  Sigma_0 = clusterGeneration::rcorrmatrix(q)
 
   chol_D_1 = chol(D_1)
   chol_D_0 = chol(D_0)
-  sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
-  sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
+  sqrt_Sigma_1 = sqrt_matrix(Sigma_1)
+  sqrt_Sigma_0 = sqrt_matrix(Sigma_0)
 
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_1)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
@@ -70,11 +75,8 @@ simulation = function(n, q) {
   L_init_list = lapply(Sigma_init_list, function(i) t(chol(i)))
   mvHE_time = system.time({mvHE_estimate = mvREHE::mvHE(Y, list(D_0, D_1))})[3]
   mvREHE_time = system.time({mvREHE_estimate = mvREHE::mvREHE(Y, list(D_0, D_1), lambda = 0, L_init_list = "mvHE", algorithm = "L-BFGS-B")})[3]
-  cv_mvREHE_time = system.time({cv_mvREHE_estimate = mvREHE::cv_mvREHE(Y, list(D_0, D_1), K = 5, L_init_list = "mvHE", algorithm = "L-BFGS-B")})[3]
+  orc_mvREHE_time = system.time({orc_mvREHE_estimate = mvREHE::oracle_mvREHE(Y, list(D_0, D_1), list(Sigma_0, Sigma_1), L_init_list = "mvHE", algorithm = "L-BFGS-B")})[3]
   mvLRHE_time = system.time({mvLRHE_estimate = mvLRHE(Y, list(D_0, D_1), r = q, Sigma_init_list = "mvHE")})[3]
-  cv_mvLRHE_time = system.time({cv_mvLRHE_estimate = cv_mvLRHE(Y, list(D_0, D_1), K = 5, Sigma_init_list = "mvHE")})[3]
-  orc_mvLRHE_time = system.time({orc_mvLRHE_estimate = mvLRHE(Y, list(D_0, D_1), r = r, Sigma_init_list = "mvHE")})[3]
-  one_mvLRHE_time = system.time({one_mvLRHE_estimate = mvLRHE(Y, list(D_0, D_1), r = 1, Sigma_init_list = "mvHE")})[3]
   if (FALSE) {# q <= 5 & n <= 400) {
     mvREML_time = system.time({mvREML_estimate = mvREML(Y, D_0, D_1)})[3]
   } else {
@@ -83,12 +85,14 @@ simulation = function(n, q) {
   }
   naive = list(Sigma_hat = list(clusterGeneration::rcorrmatrix(q), clusterGeneration::rcorrmatrix(q)))
 
-  return(list(time = c(mvHE = mvHE_time, mvREHE = mvREHE_time, cv_mvREHE = cv_mvREHE_time, mvLRHE = mvLRHE_time, cv_mvLRHE = cv_mvLRHE_time, orc_mvLRHE = orc_mvLRHE_time, one_mvLRHE = one_mvLRHE_time, mvREML = mvREML_time),
+  estimates = list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, orc_mvREHE = orc_mvREHE_estimate, mvLRHE = mvLRHE_estimate, mvREML = mvREML_estimate, naive = naive)
+
+  return(list(time = c(mvHE = mvHE_time, mvREHE = mvREHE_time, orc_mvREHE = orc_mvREHE_time, mvLRHE = mvLRHE_time, mvREML = mvREML_time),
               truncated = 1 * c(attr(mvHE_estimate$Sigma_hat[[1]], "truncated"), attr(mvHE_estimate$Sigma_hat[[2]], "truncated")),
               min_eigenvalue = c(attr(mvHE_estimate$Sigma_hat[[1]], "min_eigenvalue"), attr(mvHE_estimate$Sigma_hat[[2]], "min_eigenvalue")),
-              squared_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, cv_mvREHE = cv_mvREHE_estimate, mvLRHE = mvLRHE_estimate, cv_mvLRHE = cv_mvLRHE_estimate, orc_mvLRHE = orc_mvLRHE_estimate, one_mvLRHE = one_mvLRHE_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(squared_error(Sigma_0, estimate$Sigma_hat[[1]]), squared_error(Sigma_1, estimate$Sigma_hat[[2]]))),
-              spectral_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, cv_mvREHE = cv_mvREHE_estimate, mvLRHE = mvLRHE_estimate, cv_mvLRHE = cv_mvLRHE_estimate, orc_mvLRHE = orc_mvLRHE_estimate, one_mvLRHE = one_mvLRHE_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(spectral_error(Sigma_0, estimate$Sigma_hat[[1]]), spectral_error(Sigma_1, estimate$Sigma_hat[[2]]))),
-              EV1_error = lapply(list(mvHE = mvHE_estimate, mvREHE = mvREHE_estimate, cv_mvREHE = cv_mvREHE_estimate, mvLRHE = mvLRHE_estimate, cv_mvLRHE = cv_mvLRHE_estimate, orc_mvLRHE = orc_mvLRHE_estimate, one_mvLRHE = one_mvLRHE_estimate, mvREML = mvREML_estimate, naive = naive), function(estimate) c(EV1_error(Sigma_0, estimate$Sigma_hat[[1]]), EV1_error(Sigma_1, estimate$Sigma_hat[[2]])))))
+              squared_error = lapply(estimates, function(estimate) c(squared_error(Sigma_0, estimate$Sigma_hat[[1]]), squared_error(Sigma_1, estimate$Sigma_hat[[2]]))),
+              spectral_error = lapply(estimates, function(estimate) c(spectral_error(Sigma_0, estimate$Sigma_hat[[1]]), spectral_error(Sigma_1, estimate$Sigma_hat[[2]]))),
+              EV1_error = lapply(estimates, function(estimate) c(EV1_error(Sigma_0, estimate$Sigma_hat[[1]]), EV1_error(Sigma_1, estimate$Sigma_hat[[2]])))))
 
 }
 

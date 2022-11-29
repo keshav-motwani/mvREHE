@@ -15,6 +15,51 @@
 #' @export
 #'
 #' @examples
+oracle_mvREHE = function(Y, D_list, Sigma_list, n_lambda = 10, lambda_max = 1, lambda_min = 1e-8, tolerance = 1e-9, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
+
+  q = ncol(Y)
+  lambda_seq = c(log_seq(lambda_max, lambda_min, n_lambda), 0) # / (q * (q - 1) / 2)
+
+  L_init_list_orig = L_init_list
+
+  loss = numeric(length(lambda_seq))
+
+  for (l in 1:length(lambda_seq)) {
+
+    print(l)
+
+    Sigma_hat = mvREHE(Y, D_list, lambda_seq[l], tolerance, max_iter, L_init_list, algorithm)$Sigma_hat
+    loss[l] = sum(sapply(1:length(Sigma_hat), function(k) norm(Sigma_hat[[k]] - Sigma_list[[k]], "2")))
+
+  }
+
+  lambda = lambda_seq[which.min(loss)]
+
+  result = mvREHE(Y, D_list, lambda, tolerance, max_iter, L_init_list_orig, algorithm)
+  result$cv_loss = loss
+  result$lambda = lambda
+
+  result
+
+}
+
+#' mvREHE
+#'
+#' @param Y
+#' @param D_list
+#' @param K
+#' @param n_lambda
+#' @param lambda_max
+#' @param lambda_min
+#' @param tolerance
+#' @param max_iter
+#' @param L_init_list
+#' @param algorithm
+#'
+#' @return
+#' @export
+#'
+#' @examples
 cv_mvREHE = function(Y, D_list, K, n_lambda = 10, lambda_max = 1, lambda_min = 1e-8, tolerance = 1e-9, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
 
   folds = split(sample(1:nrow(Y), nrow(Y)), 1:K)
