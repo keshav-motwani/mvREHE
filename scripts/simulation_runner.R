@@ -1,6 +1,6 @@
 library(mvREHE)
 
-RESULT_PATH = "results_cv_lr_again/"
+RESULT_PATH = "results_large/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 squared_error = function(A, B) {
@@ -98,16 +98,10 @@ simulation = function(n, q) {
 
 replicates = 1:50
 ns = 200 * 1:5
-qs = c(3, 10)
+qs = c(10, 50)
 grid = expand.grid(replicate = replicates, n = ns, q = qs, experiment = "n")
-ns = c(200)
-qs = c(3, 5, 10, 25, 50)
-grid = rbind(grid, expand.grid(replicate = replicates, n = ns, q = qs, experiment = "q"))
-ns = c(600)
-qs = c(3, 5, 10)
-grid = rbind(grid, expand.grid(replicate = replicates, n = ns, q = qs, experiment = "q"))
-ns = c(600)
-qs = c(25, 50)
+ns = c(200, 600)
+qs = c(10, 25, 50, 100, 250)
 grid = rbind(grid, expand.grid(replicate = replicates, n = ns, q = qs, experiment = "q"))
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
