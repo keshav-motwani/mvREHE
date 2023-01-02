@@ -153,7 +153,7 @@ mvREHE = function(Y, D_list, lambda = 0, tolerance = 1e-9, max_iter = 10000, L_i
   if (algorithm == "GD") {
     objective = fit_GD(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, gradient_list)
   } else if (algorithm %in% c("L-BFGS-B")) {
-    fit = fit_optim(Y_tilde_list, X_tilde, lambda, max_iter, L_list, algorithm)
+    fit = fit_optim(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, algorithm)
     L_list = fit$L_list
     objective = fit$objective
   }

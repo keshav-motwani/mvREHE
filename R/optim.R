@@ -1,4 +1,4 @@
-fit_optim = function(Y_tilde_list, X_tilde, lambda, max_iter = 10000, L_init_list = NULL, algorithm = "L-BFGS-B") {
+fit_optim = function(Y_tilde_list, X_tilde, lambda, max_iter = 10000, tolerance = 1e-9, L_init_list = NULL, algorithm = "L-BFGS-B") {
 
   library(optimx)
 
@@ -52,7 +52,7 @@ fit_optim = function(Y_tilde_list, X_tilde, lambda, max_iter = 10000, L_init_lis
   opt <- optimx(par, loss_wrapper,
                 gr = gradient_wrapper,
                 method = algorithm,
-                control = list(trace = 0, maxit = max_iter, kkt =FALSE, starttests = FALSE) )
+                control = list(trace = 0, maxit = max_iter, kkt =FALSE, starttests = FALSE, factr = tolerance / 1e-15, pgtol = tolerance) )
   par_opt <- coef(opt)
 
   dim(par_opt) = c(q*(q+1)/2,K)
