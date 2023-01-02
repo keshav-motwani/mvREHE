@@ -52,29 +52,11 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// fit_GD
-arma::vec fit_GD(const List& Y_tilde_list, const arma::mat& X_tilde, double lambda, int max_iter, double tolerance, List& L_list, List& gradient_list);
-RcppExport SEXP _mvREHE_fit_GD(SEXP Y_tilde_listSEXP, SEXP X_tildeSEXP, SEXP lambdaSEXP, SEXP max_iterSEXP, SEXP toleranceSEXP, SEXP L_listSEXP, SEXP gradient_listSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type Y_tilde_list(Y_tilde_listSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type X_tilde(X_tildeSEXP);
-    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
-    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
-    Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
-    Rcpp::traits::input_parameter< List& >::type L_list(L_listSEXP);
-    Rcpp::traits::input_parameter< List& >::type gradient_list(gradient_listSEXP);
-    rcpp_result_gen = Rcpp::wrap(fit_GD(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, gradient_list));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 4},
     {"_mvREHE_loss2", (DL_FUNC) &_mvREHE_loss2, 3},
     {"_mvREHE_gradient_full", (DL_FUNC) &_mvREHE_gradient_full, 5},
-    {"_mvREHE_fit_GD", (DL_FUNC) &_mvREHE_fit_GD, 7},
     {NULL, NULL, 0}
 };
 

@@ -1,4 +1,4 @@
-fit_optim = function(Y_tilde_list, X_tilde, lambda, max_iter = 10000, tolerance = 1e-9, L_init_list = NULL, algorithm = "L-BFGS-B") {
+fit_optim = function(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_init_list, algorithm) {
 
   library(optimx)
 
@@ -35,14 +35,6 @@ fit_optim = function(Y_tilde_list, X_tilde, lambda, max_iter = 10000, tolerance 
       cov_mat[lower.tri(cov_mat, diag=TRUE)]
     })
 
-  }
-
-  if (is.null(L_init_list)) {
-    L_init_list = lapply(1:K, function(i) t(chol(clusterGeneration::rcorrmatrix(q))))
-  } else if (is.character(L_init_list) && L_init_list == "mvHE") {
-    mvHE_estimate = mvHE(Y, D_list)$Sigma_hat
-    if (all(sapply(mvHE_estimate, function(x) attr(x, "truncated")) == 0)) return(list(Sigma_hat = mvHE_estimate))
-    L_init_list = lapply(1:length(mvHE_estimate), function(i) t(chol(mvHE_estimate[[i]], pivot = TRUE)))
   }
 
   par = c(sapply(L_init_list,function(cov_mat){

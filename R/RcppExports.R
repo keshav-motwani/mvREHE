@@ -13,7 +13,3 @@ gradient_full <- function(Y_tilde_list, X_tilde, L_list, gradient_list, lambda) 
     invisible(.Call('_mvREHE_gradient_full', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, L_list, gradient_list, lambda))
 }
 
-fit_GD <- function(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, gradient_list) {
-    .Call('_mvREHE_fit_GD', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, gradient_list)
-}
-

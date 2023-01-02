@@ -138,10 +138,10 @@ mvREHE = function(Y, D_list, lambda = 0, tolerance = 1e-9, max_iter = 10000, L_i
 
   if (is.null(L_init_list)) {
     L_list = lapply(1:length(D_list), function(i) t(chol(clusterGeneration::rcorrmatrix(q))))
-  } else if (is.character(L_init_list) && L_init_list == "mvHE") {
-    mvHE_estimate = mvHE(Y, D_list)$Sigma_hat
-    if (all(sapply(mvHE_estimate, function(x) attr(x, "truncated")) == 0)) return(list(Sigma_hat = mvHE_estimate))
-    L_list = lapply(1:length(mvHE_estimate), function(i) t(chol(mvHE_estimate[[i]], pivot = TRUE)))
+  # } else if (is.character(L_init_list) && L_init_list == "mvHE") {
+  #   mvHE_estimate = mvHE(Y, D_list)$Sigma_hat
+  #   if (all(sapply(mvHE_estimate, function(x) attr(x, "truncated")) == 0)) return(list(Sigma_hat = mvHE_estimate))
+  #   L_list = lapply(1:length(mvHE_estimate), function(i) t(chol(mvHE_estimate[[i]], pivot = TRUE)))
   } else {
     L_list = L_init_list
   }
