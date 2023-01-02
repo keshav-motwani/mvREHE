@@ -150,13 +150,9 @@ mvREHE = function(Y, D_list, lambda = 0, tolerance = 1e-9, max_iter = 10000, L_i
   X_tilde = do.call(cbind, lapply(D_list, function(D) c(D)))
   gradient_list = replicate(length(D_list), matrix(0, q, q), simplify = FALSE)
 
-  if (algorithm == "GD") {
-    objective = fit_GD(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, gradient_list)
-  } else if (algorithm %in% c("L-BFGS-B")) {
-    fit = fit_optim(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, algorithm)
-    L_list = fit$L_list
-    objective = fit$objective
-  }
+  fit = fit_optim(Y_tilde_list, X_tilde, lambda, max_iter, tolerance, L_list, algorithm)
+  L_list = fit$L_list
+  objective = fit$objective
 
   return(list(Sigma_hat = lapply(L_list, function(L) tcrossprod(L)),
               objective = objective[objective != 0]))
