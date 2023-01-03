@@ -34,7 +34,7 @@ oracle_mvLRHE = function(Y, D_list, Sigma_list, n_rank = 10, rank_max = ncol(Y),
 
     loss[l] = sum(sapply(1:length(Sigma_hat), function(k) norm(Sigma_hat[[k]] - Sigma_list[[k]], "2")))
 
-    if (loss[l] = min(loss, na.rm = T)) best_fit = fit
+    if (loss[l] == min(loss, na.rm = T)) best_fit = fit
 
     Sigma_init_list = Sigma_hat
 
