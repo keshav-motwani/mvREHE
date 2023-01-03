@@ -12,7 +12,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // loss
-double loss(const List& Y_tilde_list, const arma::mat& X_tilde, const List& L_list, double lambda);
+double loss(const List& Y_tilde_list, const arma::mat& X_tilde, const List& L_list, arma::vec lambda);
 RcppExport SEXP _mvREHE_loss(SEXP Y_tilde_listSEXP, SEXP X_tildeSEXP, SEXP L_listSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -20,7 +20,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const List& >::type Y_tilde_list(Y_tilde_listSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X_tilde(X_tildeSEXP);
     Rcpp::traits::input_parameter< const List& >::type L_list(L_listSEXP);
-    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type lambda(lambdaSEXP);
     rcpp_result_gen = Rcpp::wrap(loss(Y_tilde_list, X_tilde, L_list, lambda));
     return rcpp_result_gen;
 END_RCPP
@@ -39,7 +39,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // gradient_full
-void gradient_full(const List& Y_tilde_list, const arma::mat& X_tilde, const List& L_list, List& gradient_list, double lambda);
+void gradient_full(const List& Y_tilde_list, const arma::mat& X_tilde, const List& L_list, List& gradient_list, arma::vec lambda);
 RcppExport SEXP _mvREHE_gradient_full(SEXP Y_tilde_listSEXP, SEXP X_tildeSEXP, SEXP L_listSEXP, SEXP gradient_listSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -47,7 +47,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type X_tilde(X_tildeSEXP);
     Rcpp::traits::input_parameter< const List& >::type L_list(L_listSEXP);
     Rcpp::traits::input_parameter< List& >::type gradient_list(gradient_listSEXP);
-    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type lambda(lambdaSEXP);
     gradient_full(Y_tilde_list, X_tilde, L_list, gradient_list, lambda);
     return R_NilValue;
 END_RCPP

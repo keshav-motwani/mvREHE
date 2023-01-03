@@ -6,7 +6,7 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list, double lambda) {
+double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list, arma::vec lambda) {
 
   double value = 0;
 
@@ -45,7 +45,7 @@ double loss(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L
   for (R_xlen_t k = 0; k < K; k++) {
     NumericMatrix L_ = L_list[k];
     arma::mat L(L_.begin(), L_.nrow(), L_.ncol(), false) ;
-    value += lambda / 2 * arma::accu(arma::square(L));
+    value += lambda(k) / 2 * arma::accu(arma::square(L));
   }
 
   return value;
@@ -92,7 +92,7 @@ double loss2(const List & Y_tilde_list, const arma::mat & X_tilde, const List & 
 }
 
 // [[Rcpp::export]]
-void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list, List & gradient_list, double lambda) {
+void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const List & L_list, List & gradient_list, arma::vec lambda) {
 
   double value = 0;
 
@@ -182,7 +182,7 @@ void gradient_full(const List & Y_tilde_list, const arma::mat & X_tilde, const L
     arma::mat grad(grad_.begin(), grad_.nrow(), grad_.ncol(), false);
     NumericMatrix L_ = L_list[k];
     arma::mat L(L_.begin(), L_.nrow(), L_.ncol(), false);
-    grad += lambda * L;
+    grad += lambda(k) * L;
   }
 
 }
