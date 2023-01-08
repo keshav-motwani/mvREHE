@@ -8,7 +8,7 @@ mvREHE(
   Y,
   D_list,
   lambda = NULL,
-  tolerance = 1e-09,
+  tolerance = 1e-07,
   max_iter = 10000,
   L_init_list = NULL,
   algorithm = "L-BFGS-B"

@@ -8,10 +8,10 @@ cv_mvLRHE(
   Y,
   D_list,
   K,
-  n_rank = 10,
+  n_rank = 5,
   rank_max = ncol(Y),
   rank_min = 1,
-  tolerance = 1e-09,
+  tolerance = 1e-07,
   max_iter = 10000,
   Sigma_init_list = NULL
 )

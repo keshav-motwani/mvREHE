@@ -38,6 +38,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// loss3
+double loss3(const arma::mat Y, const arma::mat& X_tilde, const List& Sigma_list);
+RcppExport SEXP _mvREHE_loss3(SEXP YSEXP, SEXP X_tildeSEXP, SEXP Sigma_listSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X_tilde(X_tildeSEXP);
+    Rcpp::traits::input_parameter< const List& >::type Sigma_list(Sigma_listSEXP);
+    rcpp_result_gen = Rcpp::wrap(loss3(Y, X_tilde, Sigma_list));
+    return rcpp_result_gen;
+END_RCPP
+}
 // gradient_full
 void gradient_full(const List& Y_tilde_list, const arma::mat& X_tilde, const List& L_list, List& gradient_list, arma::vec lambda);
 RcppExport SEXP _mvREHE_gradient_full(SEXP Y_tilde_listSEXP, SEXP X_tildeSEXP, SEXP L_listSEXP, SEXP gradient_listSEXP, SEXP lambdaSEXP) {
@@ -52,11 +65,25 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// compute_W_list
+void compute_W_list(const arma::mat& Y, const List& D_list, List& W_list);
+RcppExport SEXP _mvREHE_compute_W_list(SEXP YSEXP, SEXP D_listSEXP, SEXP W_listSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const List& >::type D_list(D_listSEXP);
+    Rcpp::traits::input_parameter< List& >::type W_list(W_listSEXP);
+    compute_W_list(Y, D_list, W_list);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 4},
     {"_mvREHE_loss2", (DL_FUNC) &_mvREHE_loss2, 3},
+    {"_mvREHE_loss3", (DL_FUNC) &_mvREHE_loss3, 3},
     {"_mvREHE_gradient_full", (DL_FUNC) &_mvREHE_gradient_full, 5},
+    {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 3},
     {NULL, NULL, 0}
 };
 

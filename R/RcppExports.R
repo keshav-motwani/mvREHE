@@ -9,7 +9,15 @@ loss2 <- function(Y_tilde_list, X_tilde, Sigma_list) {
     .Call('_mvREHE_loss2', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, Sigma_list)
 }
 
+loss3 <- function(Y, X_tilde, Sigma_list) {
+    .Call('_mvREHE_loss3', PACKAGE = 'mvREHE', Y, X_tilde, Sigma_list)
+}
+
 gradient_full <- function(Y_tilde_list, X_tilde, L_list, gradient_list, lambda) {
     invisible(.Call('_mvREHE_gradient_full', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, L_list, gradient_list, lambda))
+}
+
+compute_W_list <- function(Y, D_list, W_list) {
+    invisible(.Call('_mvREHE_compute_W_list', PACKAGE = 'mvREHE', Y, D_list, W_list))
 }
 

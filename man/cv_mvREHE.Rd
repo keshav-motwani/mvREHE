@@ -8,10 +8,10 @@ cv_mvREHE(
   Y,
   D_list,
   K,
-  n_lambda = 10,
+  n_lambda = 5,
   lambda_max = 1,
   lambda_min = 1e-08,
-  tolerance = 1e-09,
+  tolerance = 1e-07,
   max_iter = 10000,
   L_init_list = NULL,
   algorithm = "L-BFGS-B"
