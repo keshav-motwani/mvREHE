@@ -7,7 +7,8 @@
 mvLRHE(
   Y,
   D_list,
-  r,
+  r = NULL,
+  lambda = NULL,
   tolerance = 1e-07,
   max_iter = 10000,
   Sigma_init_list = NULL

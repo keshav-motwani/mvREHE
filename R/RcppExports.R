@@ -9,8 +9,8 @@ loss2 <- function(Y_tilde_list, X_tilde, Sigma_list) {
     .Call('_mvREHE_loss2', PACKAGE = 'mvREHE', Y_tilde_list, X_tilde, Sigma_list)
 }
 
-loss3 <- function(Y, X_tilde, Sigma_list) {
-    .Call('_mvREHE_loss3', PACKAGE = 'mvREHE', Y, X_tilde, Sigma_list)
+loss3 <- function(Y, X_tilde, Sigma_list, lambda) {
+    .Call('_mvREHE_loss3', PACKAGE = 'mvREHE', Y, X_tilde, Sigma_list, lambda)
 }
 
 gradient_full <- function(Y_tilde_list, X_tilde, L_list, gradient_list, lambda) {

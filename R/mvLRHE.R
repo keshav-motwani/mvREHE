@@ -49,7 +49,7 @@ oracle_mvLRHE = function(Y, D_list, Sigma_list, n_rank = 5, rank_max = ncol(Y), 
 
 }
 
-#' cv_mvLRHE
+#' cv_mvLRHE_rank
 #'
 #' @param Y
 #' @param D_list
@@ -65,9 +65,9 @@ oracle_mvLRHE = function(Y, D_list, Sigma_list, n_rank = 5, rank_max = ncol(Y), 
 #' @export
 #'
 #' @examples
-cv_mvLRHE = function(Y, D_list, K, n_rank = 5, rank_max = ncol(Y), rank_min = 1, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+cv_mvLRHE_rank = function(Y, D_list, K, n_rank = 5, rank_max = ncol(Y), rank_min = 1, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
 
-  folds = split(sample(1:nrow(Y), nrow(Y)), 1:K)
+  folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
 
   q = ncol(Y)
 
@@ -89,12 +89,11 @@ cv_mvLRHE = function(Y, D_list, K, n_rank = 5, rank_max = ncol(Y), rank_min = 1,
       print(k)
 
       D_list_mk = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
-      Sigma_hat = mvLRHE(Y[-folds[[k]], ], D_list_mk, as.numeric(rank_grid[l, ]), tolerance, max_iter, Sigma_init_list)$Sigma_hat
+      Sigma_hat = mvLRHE(Y[-folds[[k]], ], D_list_mk, r = as.numeric(rank_grid[l, ]), lambda = NULL, tolerance, max_iter, Sigma_init_list)$Sigma_hat
 
-      Y_tilde_list_k = lapply(1:q, function(j) lapply(1:j, function(m) c(tcrossprod(Y[folds[[k]], j], Y[folds[[k]], m]))))
       X_tilde_k = do.call(cbind, lapply(D_list, function(D) c(D[folds[[k]], folds[[k]]])))
 
-      loss_l = loss_l + length(folds[[k]])^2 * loss2(Y_tilde_list_k, X_tilde_k, Sigma_hat)
+      loss_l = loss_l + length(folds[[k]])^2 * loss3(Y[folds[[k]], ], X_tilde_k, Sigma_hat, rep(0, length(D_list)))
 
     }
 
@@ -104,11 +103,77 @@ cv_mvLRHE = function(Y, D_list, K, n_rank = 5, rank_max = ncol(Y), rank_min = 1,
 
   l = which.min(loss)
   rank = rank_grid[l, ]
+  print(rank)
 
-  result = mvLRHE(Y, D_list, rank, tolerance, max_iter, Sigma_init_list)
+  result = mvLRHE(Y, D_list, r = rank, lambda = NULL, tolerance, max_iter, Sigma_init_list)
   result$cv_loss = loss
   result$rank = rank
   result$rank_grid = rank_grid
+
+  result
+
+}
+
+#' cv_mvLRHE_rank
+#'
+#' @param Y
+#' @param D_list
+#' @param K
+#' @param n_rank
+#' @param rank_max
+#' @param rank_min
+#' @param tolerance
+#' @param max_iter
+#' @param Sigma_init_list
+#'
+#' @return
+#' @export
+#'
+#' @examples
+cv_mvLRHE_L2 = function(Y, D_list, K, n_lambda = 5, lambda_max = 1e-4, lambda_min = 1e-12, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+
+  folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
+
+  q = ncol(Y)
+
+  lambda_seq = c(log_seq(lambda_max, lambda_min, n_lambda), 0)
+  lambda_grid = do.call(expand.grid, replicate(length(D_list), lambda_seq, simplify = F))
+
+  Sigma_init_list = Sigma_init_list
+
+  loss = numeric(nrow(lambda_grid))
+
+  for (l in 1:nrow(lambda_grid)) {
+
+    print(l)
+
+    loss_l = 0
+
+    for (k in 1:K) {
+
+      print(k)
+
+      D_list_mk = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
+      Sigma_hat = mvLRHE(Y[-folds[[k]], ], D_list_mk, r = NULL, lambda = as.numeric(lambda_grid[l, ]), tolerance, max_iter, Sigma_init_list)$Sigma_hat
+
+      X_tilde_k = do.call(cbind, lapply(D_list, function(D) c(D[folds[[k]], folds[[k]]])))
+
+      loss_l = loss_l + length(folds[[k]])^2 * loss3(Y[folds[[k]], ], X_tilde_k, Sigma_hat, rep(0, length(D_list)))
+
+    }
+
+    loss[l] = loss_l
+
+  }
+
+  l = which.min(loss)
+  lambda = lambda_grid[l, ]
+  print(lambda)
+
+  result = mvLRHE(Y, D_list, r = NULL, lambda = as.numeric(lambda), tolerance, max_iter, Sigma_init_list)
+  result$cv_loss = loss
+  result$lambda = lambda
+  result$lambda_grid = lambda_grid
 
   result
 
@@ -126,11 +191,15 @@ cv_mvLRHE = function(Y, D_list, K, n_rank = 5, rank_max = ncol(Y), rank_min = 1,
 #' @export
 #'
 #' @examples
-mvLRHE = function(Y, D_list, r, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+mvLRHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
 
+  n = nrow(Y)
   q = ncol(Y)
   K = length(D_list)
   objective = numeric(max_iter)
+
+  if (is.null(r)) r = rep(q, K)
+  if (is.null(lambda)) lambda = rep(0, K)
 
   if (is.null(Sigma_init_list)) {
     Sigma_list = lapply(1:length(D_list), function(i) clusterGeneration::rcorrmatrix(q))
@@ -140,7 +209,6 @@ mvLRHE = function(Y, D_list, r, tolerance = 1e-7, max_iter = 10000, Sigma_init_l
     Sigma_list = Sigma_init_list
   }
 
-  # Y_tilde_list = lapply(1:q, function(j) lapply(1:j, function(m) c(tcrossprod(Y[, j], Y[, m]))))
   X_tilde = do.call(cbind, lapply(D_list, function(D) c(D)))
 
   W_list = lapply(1:K, function(x) matrix(0, q, q))
@@ -155,10 +223,9 @@ mvLRHE = function(Y, D_list, r, tolerance = 1e-7, max_iter = 10000, Sigma_init_l
       for (k in setdiff(1:K, z)) {
         mat = mat - Sigma_list[[k]] * Q[k, z]
       }
-      mat = mat / Q[z, z]
 
       eig = RSpectra::eigs_sym(mat, r[z])
-      Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(eig$values, 0))
+      Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(eig$values / (Q[z, z] + (lambda[z] * n^2 * q^2)), 0))
 
     }
 
@@ -166,7 +233,7 @@ mvLRHE = function(Y, D_list, r, tolerance = 1e-7, max_iter = 10000, Sigma_init_l
 
       it = (iter %/% 10)
 
-      objective[it] = loss3(Y, X_tilde, Sigma_list)
+      objective[it] = loss3(Y, X_tilde, Sigma_list, lambda)
 
       if (it > 1 && objective[it] > objective[it - 1]) {
         print(c(objective[1:it]))
