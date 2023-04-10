@@ -30,14 +30,18 @@ sqrt_matrix = function(A) {
 
 }
 
+ar1_cor = function(n, m, rho) {
+
+  exponent = abs(matrix(1:m - 1, nrow = m, ncol = m, byrow = TRUE) - (1:m - 1))
+  mat = rho^exponent
+
+  as.matrix(Matrix::bdiag(replicate(n / m, mat, simplify = FALSE)))
+
+}
+
 simulation = function(n, q, method) {
 
-  D_1 = matrix(nrow = n, ncol = n)
-  for (i in 1:n) {
-    for (j in 1:n) {
-      D_1[i, j] = 0.5^abs(i - j)
-    }
-  }
+  D_1 = ar1_cor(n, 10, 0.5)
 
   D_0 = diag(1, nrow = n, ncol = n)
 
@@ -47,7 +51,7 @@ simulation = function(n, q, method) {
   Sigma_0 = make_low_rank(clusterGeneration::rcorrmatrix(q), q)
 
   chol_D_1 = chol(D_1)
-  chol_D_0 = chol(D_0)
+  chol_D_0 = D_0
   sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
   sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
 
@@ -66,9 +70,11 @@ simulation = function(n, q, method) {
   } else if (method == "orc_mvREHE") {
     time = system.time({estimate = oracle_mvREHE(Y, list(D_0, D_1), list(Sigma_0, Sigma_1), algorithm = "L-BFGS-B", L_init_list = L_init_list)})[3]
   } else if (method == "mvLRHE") {
-    time = system.time({estimate = mvLRHE(Y, list(D_0, D_1), r = c(q, q), Sigma_init_list = Sigma_init_list)})[3]
-  } else if (method == "orc_mvLRHE") {
-    time = system.time({estimate = oracle_mvLRHE(Y, list(D_0, D_1), list(Sigma_0, Sigma_1), Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvLRHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
+  } else if (method == "mvLRHE_L2") {
+    time = system.time({estimate = cv_mvLRHE_L2(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
+  } else if (method == "mvLRHE_rank") {
+    time = system.time({estimate = cv_mvLRHE_rank(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREML") {
     time = system.time({estimate = mvREML(Y, D_0, D_1)})[3]
   } else if (method == "naive") {
@@ -91,6 +97,7 @@ simulation = function(n, q, method) {
   return(list(
     time = time,
     estimate = estimate,
+    true = list(Sigma_0, Sigma_1),
     truncated = truncated,
     min_eigenvalue = min_eigenvalue,
     spectral_error = mapply(spectral_error, estimate$Sigma_hat, list(Sigma_0, Sigma_1))
