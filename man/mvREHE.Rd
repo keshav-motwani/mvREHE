@@ -7,15 +7,15 @@
 mvREHE(
   Y,
   D_list,
+  r = NULL,
   lambda = NULL,
   tolerance = 1e-07,
   max_iter = 10000,
-  L_init_list = NULL,
-  algorithm = "L-BFGS-B"
+  Sigma_init_list = NULL
 )
 }
 \arguments{
-\item{algorithm}{}
+\item{Sigma_init_list}{}
 }
 \description{
 mvREHE
