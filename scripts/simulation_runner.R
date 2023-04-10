@@ -66,15 +66,11 @@ simulation = function(n, q, method) {
   if (method == "mvHE") {
     time = system.time({estimate = mvHE(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREHE") {
-    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), algorithm = "L-BFGS-B", L_init_list = L_init_list)})[3]
-  } else if (method == "orc_mvREHE") {
-    time = system.time({estimate = oracle_mvREHE(Y, list(D_0, D_1), list(Sigma_0, Sigma_1), algorithm = "L-BFGS-B", L_init_list = L_init_list)})[3]
-  } else if (method == "mvLRHE") {
-    time = system.time({estimate = mvLRHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
-  } else if (method == "mvLRHE_L2") {
-    time = system.time({estimate = cv_mvLRHE_L2(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
-  } else if (method == "mvLRHE_rank") {
-    time = system.time({estimate = cv_mvLRHE_rank(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
+  } else if (method == "mvREHE_L2") {
+    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
+  } else if (method == "mvREHE_rank") {
+    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREML") {
     time = system.time({estimate = mvREML(Y, D_0, D_1)})[3]
   } else if (method == "naive") {
@@ -105,7 +101,7 @@ simulation = function(n, q, method) {
 
 }
 
-methods = c("mvHE", "mvREHE", "orc_mvREHE", "mvLRHE", "orc_mvLRHE", "mvREML", "naive")
+methods = c("mvHE", "mvREHE", "mvREHE_L2", "mvREHE_rank", "mvREML", "naive")
 replicates = 1:50
 ns = 200 * 1:5
 qs = c(3, 50)
