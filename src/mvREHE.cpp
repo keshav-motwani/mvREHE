@@ -92,7 +92,7 @@ double loss2(const List & Y_tilde_list, const arma::mat & X_tilde, const List & 
 }
 
 // [[Rcpp::export]]
-double loss3(const arma::mat Y, const arma::mat & X_tilde, const List & Sigma_list) {
+double loss3(const arma::mat Y, const arma::mat & X_tilde, const List & Sigma_list, arma::vec lambda) {
 
   double value = 0;
 
@@ -124,7 +124,15 @@ double loss3(const arma::mat Y, const arma::mat & X_tilde, const List & Sigma_li
 
   }
 
-  return value / (X_tilde.n_rows * q * q);
+  value = value / (X_tilde.n_rows * q * q);
+
+  for (R_xlen_t k = 0; k < K; k++) {
+    NumericMatrix Sigma_ = Sigma_list[k];
+    arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false) ;
+    value += lambda(k) * arma::accu(arma::square(Sigma));
+  }
+
+  return value;
 
 }
 
@@ -229,13 +237,15 @@ void compute_W_list(const arma::mat & Y, const List & D_list, List & W_list) {
   R_xlen_t K = D_list.size();
 
   for (R_xlen_t k = 0; k < K; k++) {
+    NumericMatrix D_ = D_list[k];
+    arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
+    NumericMatrix W_ = W_list[k];
+    arma::mat W(W_.begin(), W_.nrow(), W_.ncol(), false);
     for (R_xlen_t i = 0; i < n; i++) {
       for (R_xlen_t l = 0; l < n; l++) {
-        NumericMatrix D_ = D_list[k];
-        arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
-        NumericMatrix W_ = W_list[k];
-        arma::mat W(W_.begin(), W_.nrow(), W_.ncol(), false);
-        W += D(i, l) * Y.row(i).t() * Y.row(l);
+        if (D(i, l) > 1e-10) {
+          W += D(i, l) * Y.row(i).t() * Y.row(l);
+        }
       }
     }
   }

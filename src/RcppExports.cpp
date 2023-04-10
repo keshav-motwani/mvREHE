@@ -39,15 +39,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // loss3
-double loss3(const arma::mat Y, const arma::mat& X_tilde, const List& Sigma_list);
-RcppExport SEXP _mvREHE_loss3(SEXP YSEXP, SEXP X_tildeSEXP, SEXP Sigma_listSEXP) {
+double loss3(const arma::mat Y, const arma::mat& X_tilde, const List& Sigma_list, arma::vec lambda);
+RcppExport SEXP _mvREHE_loss3(SEXP YSEXP, SEXP X_tildeSEXP, SEXP Sigma_listSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat >::type Y(YSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type X_tilde(X_tildeSEXP);
     Rcpp::traits::input_parameter< const List& >::type Sigma_list(Sigma_listSEXP);
-    rcpp_result_gen = Rcpp::wrap(loss3(Y, X_tilde, Sigma_list));
+    Rcpp::traits::input_parameter< arma::vec >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(loss3(Y, X_tilde, Sigma_list, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -81,7 +82,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 4},
     {"_mvREHE_loss2", (DL_FUNC) &_mvREHE_loss2, 3},
-    {"_mvREHE_loss3", (DL_FUNC) &_mvREHE_loss3, 3},
+    {"_mvREHE_loss3", (DL_FUNC) &_mvREHE_loss3, 4},
     {"_mvREHE_gradient_full", (DL_FUNC) &_mvREHE_gradient_full, 5},
     {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 3},
     {NULL, NULL, 0}
