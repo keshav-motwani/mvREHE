@@ -1,7 +1,7 @@
 library(mvREHE)
 source("scripts/mvREML.R")
 
-RESULT_PATH = "results_rank_10/"
+RESULT_PATH = "results_new_rank_10/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 spectral_error = function(A, B) {
