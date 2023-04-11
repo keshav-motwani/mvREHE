@@ -1,7 +1,7 @@
 library(mvREHE)
 source("scripts/mvREML.R")
 
-RESULT_PATH = "results_new_rank_10_large/"
+RESULT_PATH = "results_new_rank_10_large_cv/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 spectral_error = function(A, B) {
@@ -68,9 +68,13 @@ simulation = function(n, q, method) {
   } else if (method == "mvREHE") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_L2") {
-    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), K = 2, Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), lambda = c(1e-8, 1e-8), Sigma_init_list = Sigma_init_list)})[3]
+  } else if (method == "cv_mvREHE_L2") {
+    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), K = 5, lambda_max = 1e-8, lambda_min = 1e-12, Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_rank") {
-    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), K = 2, Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), r = c(q, min(q, 10)), Sigma_init_list = Sigma_init_list)})[3]
+  } else if (method == "cv_mvREHE_rank") {
+    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREML") {
     time = system.time({estimate = mvREML(Y, D_0, D_1)})[3]
   } else if (method == "naive") {
@@ -101,7 +105,7 @@ simulation = function(n, q, method) {
 
 }
 
-methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "mvREHE_rank", "mvREML")
+methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "mvREHE_rank", "cv_mvREHE_L2", "cv_mvREHE_rank")
 replicates = 1:50
 ns = 500 * 1:5
 qs = c(20, 100)
@@ -109,6 +113,9 @@ grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, exp
 ns = c(500, 2500)
 qs = 20 * 1:5
 grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, experiment = "q"))
+ns = 500 * 1:5
+qs = 3
+grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, experiment = "n"))
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
