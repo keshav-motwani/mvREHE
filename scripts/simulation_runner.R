@@ -68,9 +68,9 @@ simulation = function(n, q, method) {
   } else if (method == "mvREHE") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_L2") {
-    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), K = 2, Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_rank") {
-    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), K = 2, Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREML") {
     time = system.time({estimate = mvREML(Y, D_0, D_1)})[3]
   } else if (method == "naive") {

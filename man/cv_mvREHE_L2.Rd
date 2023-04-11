@@ -8,9 +8,9 @@ cv_mvREHE_L2(
   Y,
   D_list,
   K,
-  n_lambda = 5,
-  lambda_max = 1e-04,
-  lambda_min = 1e-12,
+  n_lambda = 3,
+  lambda_max = 1e-06,
+  lambda_min = 1e-10,
   tolerance = 1e-07,
   max_iter = 10000,
   Sigma_init_list = NULL

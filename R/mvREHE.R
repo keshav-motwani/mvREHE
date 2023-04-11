@@ -14,7 +14,7 @@
 #' @export
 #'
 #' @examples
-cv_mvREHE_rank = function(Y, D_list, K, n_rank = 5, rank_max = ncol(Y), rank_min = 1, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+cv_mvREHE_rank = function(Y, D_list, K, n_rank = 4, rank_max = ncol(Y), rank_min = 1, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
 
   folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
 
@@ -90,7 +90,7 @@ log_seq = function(from, to, length) {
 #' @export
 #'
 #' @examples
-cv_mvREHE_L2 = function(Y, D_list, K, n_lambda = 5, lambda_max = 1e-4, lambda_min = 1e-12, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+cv_mvREHE_L2 = function(Y, D_list, K, n_lambda = 3, lambda_max = 1e-6, lambda_min = 1e-10, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
 
   folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
 
