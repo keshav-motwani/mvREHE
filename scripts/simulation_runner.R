@@ -101,13 +101,13 @@ simulation = function(n, q, method) {
 
 }
 
-methods = c("mvHE", "mvREHE", "mvREHE_L2", "mvREHE_rank", "mvREML", "naive")
+methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "mvREHE_rank", "mvREML")
 replicates = 1:50
-ns = 200 * 1:5
-qs = c(3, 50)
+ns = 1000 * 1:5
+qs = c(20, 100)
 grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, experiment = "n")
-ns = c(200, 600)
-qs = c(3, 5, 10, 25, 50, 100, 250)
+ns = c(1000, 5000)
+qs = 20 * 1:5
 grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, experiment = "q"))
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
