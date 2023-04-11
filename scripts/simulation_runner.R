@@ -103,10 +103,10 @@ simulation = function(n, q, method) {
 
 methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "mvREHE_rank", "mvREML")
 replicates = 1:50
-ns = 1000 * 1:5
+ns = 500 * 1:5
 qs = c(20, 100)
 grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, experiment = "n")
-ns = c(1000, 5000)
+ns = c(500, 2500)
 qs = 20 * 1:5
 grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, experiment = "q"))
 
