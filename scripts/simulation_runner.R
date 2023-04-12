@@ -121,11 +121,11 @@ ns = 500 * 1:5
 qs = 3
 grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, experiment = "n"))
 
-PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
+PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
-n = 1000 # grid[PARAMETER_ID, "n"]
-q = 50 # grid[PARAMETER_ID, "q"]
-method = "mvREHE" # grid[PARAMETER_ID, "method"]
+n = grid[PARAMETER_ID, "n"]
+q = grid[PARAMETER_ID, "q"]
+method = grid[PARAMETER_ID, "method"]
 experiment = grid[PARAMETER_ID, "experiment"]
 
 set.seed(replicate, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
