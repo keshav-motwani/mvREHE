@@ -11,17 +11,17 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// loss3
-double loss3(const arma::mat Y, const arma::mat& X_tilde, const List& Sigma_list, arma::vec lambda);
-RcppExport SEXP _mvREHE_loss3(SEXP YSEXP, SEXP X_tildeSEXP, SEXP Sigma_listSEXP, SEXP lambdaSEXP) {
+// loss1
+double loss1(const arma::mat Y, const List& D_list, const List& Sigma_list, arma::vec lambda);
+RcppExport SEXP _mvREHE_loss1(SEXP YSEXP, SEXP D_listSEXP, SEXP Sigma_listSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type X_tilde(X_tildeSEXP);
+    Rcpp::traits::input_parameter< const List& >::type D_list(D_listSEXP);
     Rcpp::traits::input_parameter< const List& >::type Sigma_list(Sigma_listSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type lambda(lambdaSEXP);
-    rcpp_result_gen = Rcpp::wrap(loss3(Y, X_tilde, Sigma_list, lambda));
+    rcpp_result_gen = Rcpp::wrap(loss1(Y, D_list, Sigma_list, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -39,7 +39,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_mvREHE_loss3", (DL_FUNC) &_mvREHE_loss3, 4},
+    {"_mvREHE_loss1", (DL_FUNC) &_mvREHE_loss1, 4},
     {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 3},
     {NULL, NULL, 0}
 };

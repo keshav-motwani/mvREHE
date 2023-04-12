@@ -35,7 +35,11 @@ ar1_cor = function(n, m, rho) {
   exponent = abs(matrix(1:m - 1, nrow = m, ncol = m, byrow = TRUE) - (1:m - 1))
   mat = rho^exponent
 
-  as.matrix(Matrix::bdiag(replicate(n / m, mat, simplify = FALSE)))
+  chol = as.matrix(Matrix::bdiag(replicate(n / m, chol(mat), simplify = FALSE)))
+  mat = as.matrix(Matrix::bdiag(replicate(n / m, mat, simplify = FALSE)))
+  attr(mat, "chol") = chol
+
+  mat
 
 }
 
@@ -50,7 +54,7 @@ simulation = function(n, q, method) {
   Sigma_1 = make_low_rank(clusterGeneration::rcorrmatrix(q), 10)
   Sigma_0 = make_low_rank(clusterGeneration::rcorrmatrix(q), q)
 
-  chol_D_1 = chol(D_1)
+  chol_D_1 = attr(D_1, "chol")
   chol_D_0 = D_0
   sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
   sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
@@ -68,13 +72,13 @@ simulation = function(n, q, method) {
   } else if (method == "mvREHE") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_L2") {
-    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), lambda = c(1e-8, 1e-8), Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), lambda = c(1e-6, 1e-6), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "cv_mvREHE_L2") {
-    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), K = 5, lambda_max = 1e-8, lambda_min = 1e-12, Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_rank") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1), r = c(q, min(q, 10)), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "cv_mvREHE_rank") {
-    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), K = 5, Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREML") {
     time = system.time({estimate = mvREML(Y, D_0, D_1)})[3]
   } else if (method == "naive") {
@@ -117,11 +121,11 @@ ns = 500 * 1:5
 qs = 3
 grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, experiment = "n"))
 
-PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
-n = grid[PARAMETER_ID, "n"]
-q = grid[PARAMETER_ID, "q"]
-method = grid[PARAMETER_ID, "method"]
+n = 1000 # grid[PARAMETER_ID, "n"]
+q = 50 # grid[PARAMETER_ID, "q"]
+method = "mvREHE" # grid[PARAMETER_ID, "method"]
 experiment = grid[PARAMETER_ID, "experiment"]
 
 set.seed(replicate, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
