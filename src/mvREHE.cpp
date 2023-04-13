@@ -56,19 +56,41 @@ double loss1(const arma::mat Y, const List & D_list, const List & Sigma_list, ar
 void compute_W_list(const arma::mat & Y, const List & D_list, List & W_list) {
 
   R_xlen_t n = Y.n_rows;
+  R_xlen_t q = Y.n_cols;
   R_xlen_t K = D_list.size();
 
-  for (R_xlen_t k = 0; k < K; k++) {
-    NumericMatrix D_ = D_list[k];
-    arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
-    NumericMatrix W_ = W_list[k];
-    arma::mat W(W_.begin(), W_.nrow(), W_.ncol(), false);
-    for (R_xlen_t i = 0; i < n; i++) {
-      for (R_xlen_t l = 0; l < n; l++) {
+  arma::mat YtY(q, q, arma::fill::zeros);
+
+  for (R_xlen_t i = 0; i < n; i++) {
+    for (R_xlen_t l = 0; l <= i; l++) {
+
+      int all0 = 1;
+      for (R_xlen_t k = 0; k < K; k++) {
+        NumericMatrix D_ = D_list[k];
+        arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
         if (D(i, l) > 1e-10) {
-          W += D(i, l) * Y.row(i).t() * Y.row(l);
+          all0 = 0;
+          break;
         }
       }
+
+      if (all0 == 0) {
+        YtY = Y.row(i).t() * Y.row(l);
+        for (R_xlen_t k = 0; k < K; k++) {
+          NumericMatrix D_ = D_list[k];
+          arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
+          NumericMatrix W_ = W_list[k];
+          arma::mat W(W_.begin(), W_.nrow(), W_.ncol(), false);
+          if (D(i, l) > 1e-10) {
+            if (i == l) {
+              W += D(i, l) * YtY;
+            } else {
+              W += D(i, l) * (YtY + YtY.t());
+            }
+          }
+        }
+      }
+
     }
   }
 
