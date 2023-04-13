@@ -14,7 +14,7 @@
 #' @export
 #'
 #' @examples
-cv_mvREHE_rank = function(Y, D_list, K = 5, n_rank = 4, rank_max = ncol(Y), rank_min = 1, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+cv_mvREHE_rank = function(Y, D_list, K = 5, n_rank = 4, rank_max = ncol(Y), rank_min = 1, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
 
   folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
 
@@ -90,13 +90,13 @@ log_seq = function(from, to, length) {
 #' @export
 #'
 #' @examples
-cv_mvREHE_L2 = function(Y, D_list, K = 5, n_lambda = 3, lambda_max = 1e-4, lambda_min = 1e-8, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+cv_mvREHE_L2 = function(Y, D_list, K = 5, n_lambda = 3, lambda_max = 1e-4, lambda_min = 1e-8, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
 
   folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
 
   q = ncol(Y)
 
-  lambda_seq = c(log_seq(lambda_max, lambda_min, n_lambda), 0)
+  lambda_seq = log_seq(lambda_max, lambda_min, n_lambda)
   lambda_grid = do.call(expand.grid, replicate(length(D_list), lambda_seq, simplify = F))
 
   Sigma_init_list = Sigma_init_list
@@ -151,7 +151,7 @@ cv_mvREHE_L2 = function(Y, D_list, K = 5, n_lambda = 3, lambda_max = 1e-4, lambd
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = 1e-7, max_iter = 10000, Sigma_init_list = NULL) {
+mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
 
   n = nrow(Y)
   q = ncol(Y)
@@ -187,18 +187,22 @@ mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = 1e-7, max_iter
 
     }
 
-    if (iter %% 10 == 0) {
+    if (!is.null(tolerance)) {
 
-      it = (iter %/% 10)
+      if (iter %% 10 == 0) {
 
-      objective[it] = loss1(Y, D_list, Sigma_list, lambda)
+        it = (iter %/% 10)
 
-      if (it > 1 && objective[it] > objective[it - 1]) {
-        print(c(objective[1:it]))
-      }
+        objective[it] = loss1(Y, D_list, Sigma_list, lambda)
 
-      if (it > 1 && abs(objective[it - 1] - objective[it]) / objective[it - 1] < tolerance) {
-        break
+        if (it > 1 && objective[it] > objective[it - 1]) {
+          print(c(objective[1:it]))
+        }
+
+        if (it > 1 && abs(objective[it - 1] - objective[it]) / objective[it - 1] < tolerance) {
+          break
+        }
+
       }
 
     }
