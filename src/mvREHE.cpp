@@ -6,7 +6,7 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-double loss1(const arma::mat Y, const List & D_list, const List & Sigma_list, arma::vec lambda) {
+double loss(const arma::mat Y, const List & D_list, const List & Sigma_list, arma::vec lambda) {
 
   double value = 0;
 
@@ -20,20 +20,36 @@ double loss1(const arma::mat Y, const List & D_list, const List & Sigma_list, ar
 
     for (R_xlen_t m = 0; m <= j; m++) {
 
-      YtY = Y.row(j).t() * Y.row(m);
-
+      int all0 = 1;
       for (R_xlen_t k = 0; k < K; k++) {
-        NumericMatrix Sigma_ = Sigma_list[k];
-        arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false);
         NumericMatrix D_ = D_list[k];
         arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
-        YtY = YtY - D(j, m) * Sigma;
+        if (D(j, m) > 1e-10) {
+          all0 = 0;
+          break;
+        }
       }
 
-      if (j == m) {
-        value += arma::accu(arma::square(YtY));
-      } else {
-        value += 2 * arma::accu(arma::square(YtY));
+      if (all0 == 0) {
+
+        YtY = Y.row(j).t() * Y.row(m);
+
+        for (R_xlen_t k = 0; k < K; k++) {
+          NumericMatrix Sigma_ = Sigma_list[k];
+          arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false);
+          NumericMatrix D_ = D_list[k];
+          arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
+          if (D(j, m) > 1e-10) {
+            YtY = YtY - D(j, m) * Sigma;
+          }
+        }
+
+        if (j == m) {
+          value += arma::accu(arma::square(YtY));
+        } else {
+          value += 2 * arma::accu(arma::square(YtY));
+        }
+
       }
 
     }
