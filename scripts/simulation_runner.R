@@ -1,7 +1,7 @@
 library(mvREHE)
 source("scripts/mvREML.R")
 
-RESULT_PATH = "results_new_rank_10_large_cv/"
+RESULT_PATH = "simulation_results/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 spectral_error = function(A, B) {
@@ -43,7 +43,7 @@ ar1_cor = function(n, m, rho) {
 
 }
 
-simulation = function(n, q, method) {
+simulation = function(n, q, r, method) {
 
   D_1 = ar1_cor(n, 10, 0.5)
 
@@ -51,7 +51,7 @@ simulation = function(n, q, method) {
 
   colnames(D_0) = colnames(D_1) = rownames(D_0) = rownames(D_1) = as.character(1:n)
 
-  Sigma_1 = make_low_rank(clusterGeneration::rcorrmatrix(q), 10)
+  Sigma_1 = make_low_rank(clusterGeneration::rcorrmatrix(q), min(q, r))
   Sigma_0 = make_low_rank(clusterGeneration::rcorrmatrix(q), q)
 
   chol_D_1 = attr(D_1, "chol")
@@ -72,11 +72,11 @@ simulation = function(n, q, method) {
   } else if (method == "mvREHE") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_L2") {
-    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), lambda = c(1e-6, 1e-6), Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), lambda = c(1e-5, 1e-5), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "cv_mvREHE_L2") {
     time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREHE_rank") {
-    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), r = c(q, min(q, 10)), Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), r = c(q, min(q, r)), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "cv_mvREHE_rank") {
     time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "mvREML") {
@@ -111,30 +111,32 @@ simulation = function(n, q, method) {
 
 methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "mvREHE_rank", "cv_mvREHE_L2", "cv_mvREHE_rank")
 replicates = 1:50
+rs = c(10, Inf)
 ns = 500 * 1:5
 qs = c(20, 100)
-grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, experiment = "n")
+grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
 ns = c(500, 2500)
 qs = 20 * 1:5
-grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, experiment = "q"))
+grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "q"))
 ns = 500 * 1:5
 qs = 3
-grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, experiment = "n"))
+grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, experiment = "n"))
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]
+r = grid[PARAMETER_ID, "r"]
 method = grid[PARAMETER_ID, "method"]
 experiment = grid[PARAMETER_ID, "experiment"]
 
 set.seed(replicate, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
-output = simulation(n, q, method)
+output = simulation(n, q, r, method)
 
-spectral_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), spectral_error = output$spectral_error, n = n, q = q, method = method, experiment = experiment)
-time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, experiment = experiment)
-truncated = data.frame(estimate = c("Sigma_0", "Sigma_1"), truncated = output$truncated, n = n, q = q, method = method, replicate = replicate, experiment = experiment)
-min_eigenvalue = data.frame(estimate = c("Sigma_0", "Sigma_1"), min_eigenvalue = output$min_eigenvalue, n = n, q = q, method = method, replicate = replicate, experiment = experiment)
+spectral_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), spectral_error = output$spectral_error, n = n, q = q, r = r, method = method, experiment = experiment)
+time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, r = r, experiment = experiment)
+truncated = data.frame(estimate = c("Sigma_0", "Sigma_1"), truncated = output$truncated, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment)
+min_eigenvalue = data.frame(estimate = c("Sigma_0", "Sigma_1"), min_eigenvalue = output$min_eigenvalue, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment)
 
-saveRDS(list(spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
+saveRDS(list(output = output, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_r", r, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
 print(list(spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
