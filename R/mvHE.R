@@ -13,18 +13,20 @@ mvHE = function(Y, D_list) {
 
   Sigma_hat = replicate(length(D_list), matrix(NA, q, q), simplify = FALSE)
 
+  X_tilde = do.call(cbind, lapply(D_list, c))
+  indices = rowSums(X_tilde) > 0
+  X_tilde = X_tilde[indices, ]
+
+  XtXinv = solve(crossprod(X_tilde))
+
   for (j in 1:q) {
 
     for (m in 1:j) {
 
       Y_tilde = c(tcrossprod(Y[, j], Y[, m]))
-      X_tilde = do.call(cbind, lapply(D_list, c))
-
-      indices = rowSums(X_tilde) > 0
       Y_tilde = Y_tilde[indices]
-      X_tilde = X_tilde[indices, ]
 
-      sigma_hat = solve(crossprod(X_tilde), crossprod(X_tilde, Y_tilde))
+      sigma_hat = XtXinv %*% crossprod(X_tilde, Y_tilde)
       for (k in 1:length(D_list)) {
         Sigma_hat[[k]][j, m] = Sigma_hat[[k]][m, j] = sigma_hat[k]
       }
