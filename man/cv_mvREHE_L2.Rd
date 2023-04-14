@@ -2,15 +2,15 @@
 % Please edit documentation in R/mvREHE.R
 \name{cv_mvREHE_L2}
 \alias{cv_mvREHE_L2}
-\title{cv_mvREHE_rank}
+\title{cv_mvREHE_L2}
 \usage{
 cv_mvREHE_L2(
   Y,
   D_list,
   K = 5,
-  n_lambda = 3,
-  lambda_max = 1e-04,
-  lambda_min = 1e-08,
+  n_lambda = 10,
+  lambda_max = 0.001,
+  lambda_min = 1e-06,
   tolerance = NULL,
   max_iter = 100,
   Sigma_init_list = NULL
@@ -20,5 +20,5 @@ cv_mvREHE_L2(
 \item{Sigma_init_list}{}
 }
 \description{
-cv_mvREHE_rank
+cv_mvREHE_L2
 }

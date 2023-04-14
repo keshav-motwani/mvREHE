@@ -8,7 +8,7 @@ cv_mvREHE_rank(
   Y,
   D_list,
   K = 5,
-  n_rank = 4,
+  n_rank = 10,
   rank_max = ncol(Y),
   rank_min = 1,
   tolerance = NULL,
