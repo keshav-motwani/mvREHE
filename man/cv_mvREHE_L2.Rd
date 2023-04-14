@@ -11,8 +11,8 @@ cv_mvREHE_L2(
   n_lambda = 3,
   lambda_max = 1e-04,
   lambda_min = 1e-08,
-  tolerance = 1e-07,
-  max_iter = 10000,
+  tolerance = NULL,
+  max_iter = 100,
   Sigma_init_list = NULL
 )
 }

@@ -9,9 +9,11 @@ mvREHE(
   D_list,
   r = NULL,
   lambda = NULL,
-  tolerance = 1e-07,
-  max_iter = 10000,
-  Sigma_init_list = NULL
+  tolerance = NULL,
+  max_iter = 100,
+  Sigma_init_list = NULL,
+  W_list = NULL,
+  Q = NULL
 )
 }
 \arguments{

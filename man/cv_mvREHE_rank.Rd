@@ -11,8 +11,8 @@ cv_mvREHE_rank(
   n_rank = 4,
   rank_max = ncol(Y),
   rank_min = 1,
-  tolerance = 1e-07,
-  max_iter = 10000,
+  tolerance = NULL,
+  max_iter = 100,
   Sigma_init_list = NULL
 )
 }
