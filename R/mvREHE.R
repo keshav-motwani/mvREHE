@@ -89,13 +89,13 @@ log_seq = function(from, to, length) {
 #' @export
 #'
 #' @examples
-cv_mvREHE_L2 = function(Y, D_list, K = 5, n_lambda = 10, lambda_max = 1e-3, lambda_min = 1e-6, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
+cv_mvREHE_L2 = function(Y, D_list, K = 5, grid = FALSE, n_lambda = 10, lambda_max = 1e-3, lambda_min = 1e-6, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
 
   folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
 
   q = ncol(Y)
 
-  lambda_seq = log_seq(lambda_max, lambda_min, n_lambda)
+  lambda_seq = seq(log10(lambda_max), log10(lambda_min), length.out = n_lambda)
   lambda_grid = do.call(expand.grid, replicate(length(D_list), lambda_seq, simplify = F))
 
   loss = numeric(nrow(lambda_grid))
@@ -112,19 +112,31 @@ cv_mvREHE_L2 = function(Y, D_list, K = 5, n_lambda = 10, lambda_max = 1e-3, lamb
     D_list_k_list[[k]] = lapply(D_list, function(D) D[folds[[k]], folds[[k]]])
   }
 
-  for (l in 1:nrow(lambda_grid)) {
-    cat(l)
+  cv_loss = function(lambda) {
     loss_l = 0
     for (k in 1:K) {
       cat(k)
-      Sigma_hat = mvREHE(Y[-folds[[k]], ], D_list_mk_list[[k]], r = NULL, lambda = as.numeric(lambda_grid[l, ]), tolerance, max_iter, Sigma_init_list, W_list = W_list_mk_list[[k]], Q = Q_mk_list[[k]])$Sigma_hat
+      Sigma_hat = mvREHE(Y[-folds[[k]], ], D_list_mk_list[[k]], r = NULL, lambda = 10^lambda, tolerance, max_iter, Sigma_init_list, W_list = W_list_mk_list[[k]], Q = Q_mk_list[[k]])$Sigma_hat
       loss_l = loss_l + length(folds[[k]])^2 * loss(Y[folds[[k]], ], D_list_k_list[[k]], Sigma_hat, rep(0, length(D_list)))
     }
-    loss[l] = loss_l
+    return(loss_l)
   }
 
-  l = which.min(loss)
-  lambda = lambda_grid[l, ]
+  if (grid) {
+
+    for (l in 1:nrow(lambda_grid)) {
+      cat(l)
+      loss[l] = cv_loss(as.numeric(lambda_grid[l, ]))
+    }
+
+    l = which.min(loss)
+    lambda = 10^(lambda_grid[l, ])
+
+  } else {
+
+    lambda = 10^coef(optimx::optimx(rep(-5, length(D_list)), cv_loss, method = "L-BFGS-B", control = list(trace = 0, kkt =FALSE, starttests = FALSE)))
+
+  }
   cat("\n")
   print(lambda)
 
