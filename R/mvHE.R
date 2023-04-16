@@ -13,8 +13,12 @@ mvHE = function(Y, D_list) {
 
   Sigma_hat = replicate(length(D_list), matrix(NA, q, q), simplify = FALSE)
 
+  indices = do.call(`+`, D_list) > 0
+  row_indices = which(indices, arr.ind = TRUE)[, 1]
+  col_indices = which(indices, arr.ind = TRUE)[, 2]
+  indices = which(indices)
+
   X_tilde = do.call(cbind, lapply(D_list, c))
-  indices = rowSums(X_tilde) > 0
   X_tilde = X_tilde[indices, ]
 
   XtXinv = solve(crossprod(X_tilde))
@@ -23,8 +27,7 @@ mvHE = function(Y, D_list) {
 
     for (m in 1:j) {
 
-      Y_tilde = c(tcrossprod(Y[, j], Y[, m]))
-      Y_tilde = Y_tilde[indices]
+      Y_tilde = compute_Y_tilde(Y, indices - 1, row_indices - 1, col_indices - 1, j - 1, m - 1)
 
       sigma_hat = XtXinv %*% crossprod(X_tilde, Y_tilde)
       for (k in 1:length(D_list)) {

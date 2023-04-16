@@ -111,3 +111,18 @@ void compute_W_list(const arma::mat & Y, const List & D_list, List & W_list) {
   }
 
 }
+
+// [[Rcpp::export]]
+arma::vec compute_Y_tilde(const arma::mat & Y, const::arma::vec indices, const arma::vec row_indices, const arma::vec col_indices, int j, int m) {
+
+  R_xlen_t s = indices.size();
+
+  arma::vec Y_tilde(s, arma::fill::zeros);
+
+  for (R_xlen_t i = 0; i < s; i++) {
+      Y_tilde(i) = Y(row_indices(i), j) * Y(col_indices(i), m);
+  }
+
+  return Y_tilde;
+
+}

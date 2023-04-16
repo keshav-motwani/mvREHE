@@ -37,10 +37,27 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// compute_Y_tilde
+arma::vec compute_Y_tilde(const arma::mat& Y, const ::arma::vec indices, const arma::vec row_indices, const arma::vec col_indices, int j, int m);
+RcppExport SEXP _mvREHE_compute_Y_tilde(SEXP YSEXP, SEXP indicesSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP, SEXP jSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const ::arma::vec >::type indices(indicesSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type row_indices(row_indicesSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type col_indices(col_indicesSEXP);
+    Rcpp::traits::input_parameter< int >::type j(jSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_Y_tilde(Y, indices, row_indices, col_indices, j, m));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 4},
     {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 3},
+    {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 6},
     {NULL, NULL, 0}
 };
 

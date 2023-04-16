@@ -9,3 +9,7 @@ compute_W_list <- function(Y, D_list, W_list) {
     invisible(.Call('_mvREHE_compute_W_list', PACKAGE = 'mvREHE', Y, D_list, W_list))
 }
 
+compute_Y_tilde <- function(Y, indices, row_indices, col_indices, j, m) {
+    .Call('_mvREHE_compute_Y_tilde', PACKAGE = 'mvREHE', Y, indices, row_indices, col_indices, j, m)
+}
+
