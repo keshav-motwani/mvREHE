@@ -27,7 +27,7 @@ mvHE = function(Y, D_list) {
 
     for (m in 1:j) {
 
-      Y_tilde = compute_Y_tilde(Y, indices - 1, row_indices - 1, col_indices - 1, j - 1, m - 1)
+      Y_tilde = compute_Y_tilde(Y, row_indices - 1, col_indices - 1, j - 1, m - 1)
 
       sigma_hat = XtXinv %*% crossprod(X_tilde, Y_tilde)
       for (k in 1:length(D_list)) {

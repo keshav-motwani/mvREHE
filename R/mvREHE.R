@@ -104,20 +104,32 @@ cv_mvREHE_L2 = function(Y, D_list, K = 5, grid = FALSE, n_lambda = 10, lambda_ma
   W_list_mk_list = vector(mode = "list", length = K)
   Q_mk_list = vector(mode = "list", length = K)
   D_list_k_list = vector(mode = "list", length = K)
+  row_indices_mk_list = vector(mode = "list", length = K)
+  col_indices_mk_list = vector(mode = "list", length = K)
+  row_indices_k_list = vector(mode = "list", length = K)
+  col_indices_k_list = vector(mode = "list", length = K)
   for (k in 1:K) {
-    D_list_mk_list[[k]] = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
-    W_list_mk_list[[k]] = lapply(1:length(D_list), function(x) matrix(0, q, q))
-    compute_W_list(Y[-folds[[k]], ], D_list_mk_list[[k]], W_list_mk_list[[k]])
-    Q_mk_list[[k]] = compute_Q(D_list_mk_list[[k]])
     D_list_k_list[[k]] = lapply(D_list, function(D) D[folds[[k]], folds[[k]]])
+    D_list_mk_list[[k]] = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
+    Q_mk_list[[k]] = compute_Q(D_list_mk_list[[k]])
+    indices = do.call(`+`, D_list_k_list[[k]]) > 0
+    indices = indices & lower.tri(indices, diag = TRUE)
+    row_indices_k_list[[k]] = which(indices, arr.ind = TRUE)[, 1] - 1
+    col_indices_k_list[[k]] = which(indices, arr.ind = TRUE)[, 2] - 1
+    indices = do.call(`+`, D_list_mk_list[[k]]) > 0
+    indices = indices & lower.tri(indices, diag = TRUE)
+    row_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 1] - 1
+    col_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 2] - 1
+    W_list_mk_list[[k]] = lapply(1:length(D_list), function(x) matrix(0, q, q))
+    compute_W_list(Y[-folds[[k]], ], D_list_mk_list[[k]], W_list_mk_list[[k]], row_indices_mk_list[[k]], col_indices_mk_list[[k]])
   }
 
   cv_loss = function(lambda) {
     loss_l = 0
     for (k in 1:K) {
       cat(k)
-      Sigma_hat = mvREHE(Y[-folds[[k]], ], D_list_mk_list[[k]], r = NULL, lambda = 10^lambda, tolerance, max_iter, Sigma_init_list, W_list = W_list_mk_list[[k]], Q = Q_mk_list[[k]])$Sigma_hat
-      loss_l = loss_l + length(folds[[k]])^2 * loss(Y[folds[[k]], ], D_list_k_list[[k]], Sigma_hat, rep(0, length(D_list)))
+      Sigma_hat = mvREHE(Y[-folds[[k]], ], D_list_mk_list[[k]], r = NULL, lambda = 10^lambda, tolerance, max_iter, Sigma_init_list, W_list = W_list_mk_list[[k]], Q = Q_mk_list[[k]], row_indices = row_indices_mk_list[[k]], col_indices = col_indices_mk_list[[k]])$Sigma_hat
+      loss_l = loss_l + length(folds[[k]])^2 * loss(Y[folds[[k]], ], D_list_k_list[[k]], Sigma_hat, row_indices_k_list[[k]], col_indices_k_list[[k]], rep(0, length(D_list)))
     }
     return(loss_l)
   }
@@ -161,7 +173,7 @@ cv_mvREHE_L2 = function(Y, D_list, K = 5, grid = FALSE, n_lambda = 10, lambda_ma
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL, W_list = NULL, Q = NULL) {
+mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
 
   n = nrow(Y)
   q = ncol(Y)
@@ -177,9 +189,15 @@ mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = NULL, max_iter
   } else {
     Sigma_list = Sigma_init_list
   }
+  if (is.null(row_indices) && (!is.null(tolerance) | is.null(W_list))) {
+    indices = do.call(`+`, D_list) > 0
+    indices = indices & lower.tri(indices, diag = TRUE)
+    row_indices = which(indices, arr.ind = TRUE)[, 1] - 1
+    col_indices = which(indices, arr.ind = TRUE)[, 2] - 1
+  }
   if (is.null(W_list)) {
     W_list = lapply(1:K, function(x) matrix(0, q, q))
-    compute_W_list(Y, D_list, W_list)
+    compute_W_list(Y, D_list, W_list, row_indices, col_indices)
   }
   if (is.null(Q)) {
     Q = compute_Q(D_list)
@@ -197,7 +215,7 @@ mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = NULL, max_iter
     }
 
     if (!is.null(tolerance)) {
-      objective[iter] = loss(Y, D_list, Sigma_list, lambda)
+      objective[iter] = loss(Y, D_list, Sigma_list, lambda, row_indices, col_indices)
       if (iter > 1 && abs(objective[iter - 1] - objective[iter]) / objective[iter - 1] < tolerance) {
         break
       }

@@ -13,7 +13,9 @@ mvREHE(
   max_iter = 100,
   Sigma_init_list = NULL,
   W_list = NULL,
-  Q = NULL
+  Q = NULL,
+  row_indices = NULL,
+  col_indices = NULL
 )
 }
 \arguments{
