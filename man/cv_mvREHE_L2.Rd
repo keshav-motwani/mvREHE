@@ -8,6 +8,7 @@ cv_mvREHE_L2(
   Y,
   D_list,
   K = 5,
+  folds = NULL,
   grid = FALSE,
   n_lambda = 10,
   lambda_max = 0.001,

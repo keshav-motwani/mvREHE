@@ -89,9 +89,14 @@ log_seq = function(from, to, length) {
 #' @export
 #'
 #' @examples
-cv_mvREHE_L2 = function(Y, D_list, K = 5, grid = FALSE, n_lambda = 10, lambda_max = 1e-3, lambda_min = 1e-6, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
+cv_mvREHE_L2 = function(Y, D_list, K = 5, folds = NULL, grid = FALSE, n_lambda = 10, lambda_max = 1e-3, lambda_min = 1e-6, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
 
-  folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
+  if (is.null(folds)) {
+    folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
+  } else {
+    stopifnot(length(setdiff(1:nrow(Y), unlist(folds))) == 0)
+    stopifnot(length(setdiff(unlist(folds), 1:nrow(Y))) == 0)
+  }
 
   q = ncol(Y)
 
