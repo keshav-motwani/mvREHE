@@ -1,12 +1,12 @@
 library(tidyverse)
 
-RESULT_PATH = "simulation_results/"
+RESULT_PATH = "results_new_full_rank_large_cv_tuning_fixed/"
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
 files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]
-files = files[grepl("_rInf_", files)]
+files = files[grepl("_r10_", files)]
 
 results = lapply(files, readRDS)
 
@@ -30,14 +30,12 @@ spectral_error_df = left_join(spectral_error_df, truncated %>% mutate(method = N
 time_df = left_join(time_df, truncated %>% mutate(method = NULL) %>% group_by(n, q, replicate, experiment) %>% summarize(truncated = max(truncated)), by = c("n", "q", "replicate", "experiment")) %>%
   mutate(truncated = ifelse(truncated == 0, "not truncated", "truncated"))
 
-methods = c("mvHE", "mvREHE", "mvREHE_L2", "cv_mvREHE_L2", "mvREML", "naive")
+methods = c("mvHE", "mvREHE", "mvREHE_L2", "cv_mvREHE_L2", "mvREHE_rank", "cv_mvREHE_rank", "mvREML", "naive")
 
 spectral_error_df$method = factor(spectral_error_df$method, levels = methods)
 time_df$method = factor(time_df$method, levels = methods)
 truncated$method = factor(truncated$method, levels = methods)
 min_eigenvalue_df$method = factor(min_eigenvalue_df$method, levels = methods)
-
-saveRDS(list(spectral_error = spectral_error_df, time = time_df), file.path(FIGURES_PATH, "data.rds"))
 
 palette = ggsci::pal_npg("nrc")(length(methods))
 names(palette) = methods
@@ -54,7 +52,7 @@ ggplot(spectral_error_df %>% filter(experiment == "n") %>% mutate(facet = paste0
   ylab("Spectral error") +
   labs(color = "Method") +
   theme(legend.position = "bottom")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 5.5, width = 7)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 4, width = 7)
 
 ggplot(spectral_error_df %>% filter(experiment == "n") %>% mutate(facet = paste0("q = ", q, "; ", estimate)) %>% mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))), aes(x = as.factor(n), y = spectral_error, color = method)) +
   facet_grid(facet ~ truncated, scales = "free_y") +
@@ -83,14 +81,14 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_min_eigenvalue_n.pdf"), height
 ### Time
 
 ggplot(time_df %>% filter(experiment == "n") %>% mutate(facet = paste0("q = ", q)) %>% mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))), aes(x = as.factor(n), y = log10(time), color = gsub(".elapsed", "", method))) +
-  facet_wrap(~facet, scales = "free_y", ncol = 1, dir = "v") +
+  facet_wrap(~facet, scales = "free_y", ncol = 2, dir = "v") +
   geom_boxplot(outlier.size = 0.25) +
   geom_text(data = truncated_proportion1 %>% filter(experiment == "n") %>% mutate(facet = paste0("q = ", q)) %>% mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))), aes(label = paste0(round(proportion * 100, 2), "%"), y = Inf, vjust = 2), size = 2.5) +
   theme_bw() +
   xlab("n") +
   labs(color = "Method") +
   theme(legend.position = "bottom")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 5.5, width = 5)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 2.5, width = 7)
 
 ggplot(time_df %>% filter(experiment == "n") %>% mutate(facet = paste0("q = ", q)) %>% mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))), aes(x = as.factor(n), y = log10(time), color = gsub(".elapsed", "", method))) +
   facet_grid(facet ~ truncated, scales = "free_y") +
@@ -142,14 +140,14 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_min_eigenvalue_q.pdf"), height
 ### Time
 
 ggplot(time_df %>% filter(experiment == "q"), aes(x = as.factor(q), y = log10(time), color = gsub(".elapsed", "", method))) +
-  facet_wrap(~paste0("n = ", n), scales = "free_y", ncol = 1, dir = "v") +
+  facet_wrap(~paste0("n = ", n), scales = "free_y", ncol = 2, dir = "v") +
   geom_boxplot(outlier.size = 0.25) +
   geom_text(data = truncated_proportion1 %>% filter(experiment == "q"), aes(label = paste0(round(proportion * 100, 2), "%"), y = Inf, vjust = 2), size = 2.5) +
   theme_bw() +
   xlab("q") +
   labs(color = "Method") +
   theme(legend.position = "bottom")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_time_q.pdf"), height = 4, width = 5)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_time_q.pdf"), height = 2.5, width = 7)
 
 ggplot(time_df %>% filter(experiment == "q"), aes(x = as.factor(q), y = log10(time), color = gsub(".elapsed", "", method))) +
   facet_grid(paste0("n = ", n) ~ truncated, scales = "free_y") +

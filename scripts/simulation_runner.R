@@ -74,7 +74,7 @@ simulation = function(n, q, r, method) {
   } else if (method == "mvREHE_L2") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1), lambda = c(1e-5, 1e-5), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "cv_mvREHE_L2") {
-    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list, lambda_min = 1e-8, n_lambda = 20)})[3]
   } else if (method == "mvREHE_rank") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1), r = c(q, min(q, r)), Sigma_init_list = Sigma_init_list)})[3]
   } else if (method == "cv_mvREHE_rank") {
@@ -109,20 +109,19 @@ simulation = function(n, q, r, method) {
 
 }
 
-methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "mvREHE_rank", "cv_mvREHE_L2", "cv_mvREHE_rank")
+methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "cv_mvREHE_L2")
 replicates = 1:50
-rs = c(10, Inf)
-ns = 500 * 1:5
+rs = c(Inf)
+ns = c(1000, 2000, 4000, 8000)
 qs = c(20, 100)
 grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
-ns = c(500, 2500)
-qs = 20 * 1:5
-grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "q"))
-ns = 500 * 1:5
-qs = 3
+qs = 5
 grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, experiment = "n"))
+# ns = c(1000, 4000)
+# qs = 20 * 1:5
+# grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "q"))
 
-PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
+PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]
