@@ -122,7 +122,7 @@ ns = 500 * 1:5
 qs = 3
 grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, experiment = "n"))
 
-PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]
