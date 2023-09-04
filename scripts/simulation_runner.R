@@ -1,7 +1,7 @@
 library(mvREHE)
 source("scripts/mvREML.R")
 
-RESULT_PATH = "simulation_results/"
+RESULT_PATH = "simulation_hcp_results/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 spectral_error = function(A, B) {
@@ -43,9 +43,20 @@ ar1_cor = function(n, m, rho) {
 
 }
 
+hcp_kinship = function(n) {
+  kinship = R.matlab::readMat('data/kinship.mat'); # This is 2*K in the Solar-Eclipse notation
+  K_G = as(kinship$K[[1]], "TsparseMatrix"); # Kinship matrix
+  K_G = as.matrix(K_G)
+  order = hclust(as.dist(-K_G))$order
+  K_G = K_G[order, order]
+  K_G = K_G[1:1000, 1:1000]
+  K_G = as.matrix(Matrix::bdiag(replicate(n / 1000, K_G, simplify = FALSE)))
+}
+
 simulation = function(n, q, r, method) {
 
-  D_1 = ar1_cor(n, 10, 0.5)
+  # D_1 = ar1_cor(n, 10, 0.5)
+  D_1 = hcp_kinship(n)
 
   D_0 = diag(1, nrow = n, ncol = n)
 
