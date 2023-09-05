@@ -44,13 +44,26 @@ ar1_cor = function(n, m, rho) {
 }
 
 hcp_kinship = function(n) {
+
   kinship = R.matlab::readMat('data/kinship.mat'); # This is 2*K in the Solar-Eclipse notation
   K_G = as(kinship$K[[1]], "TsparseMatrix"); # Kinship matrix
   K_G = as.matrix(K_G)
   order = hclust(as.dist(-K_G))$order
   K_G = K_G[order, order]
   K_G = K_G[1:1000, 1:1000]
+
+  chol = chol(K_G[!duplicated(K_G), !duplicated(K_G)])
+  expand = diag(1, 1000, 1000)
+  expand = expand[, !duplicated(K_G)]
+  expand[t(mapply(function(i, j) c(i, j), which(duplicated(K_G)), which(duplicated(K_G)) - 1:sum(duplicated(K_G))))] = 1
+  chol = chol %*% t(expand)
+  chol = as.matrix(Matrix::bdiag(replicate(n / 1000, chol, simplify = FALSE)))
+
   K_G = as.matrix(Matrix::bdiag(replicate(n / 1000, K_G, simplify = FALSE)))
+  attr(K_G, "chol") = chol
+
+  K_G
+
 }
 
 simulation = function(n, q, r, method) {
@@ -70,7 +83,7 @@ simulation = function(n, q, r, method) {
   sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
   sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
 
-  Gamma_1 = t(chol_D_1) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_1)
+  Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
 
   Y = Gamma_1 + Epsilon
@@ -132,7 +145,7 @@ grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replic
 # qs = 20 * 1:5
 # grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "q"))
 
-PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+PARAMETER_ID = 2 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]
