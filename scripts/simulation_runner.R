@@ -1,4 +1,5 @@
 library(mvREHE)
+library(Matrix)
 source("scripts/mvREML.R")
 
 RESULT_PATH = "simulation_hcp_results/"
@@ -55,7 +56,7 @@ hcp_kinship = function(n) {
   chol = chol(K_G[!duplicated(K_G), !duplicated(K_G)])
   expand = diag(1, 1000, 1000)
   expand = expand[, !duplicated(K_G)]
-  expand[t(mapply(function(i, j) c(i, j), which(duplicated(K_G)), which(duplicated(K_G)) - 1:sum(duplicated(K_G))))] = 1
+  expand[cbind(which(duplicated(K_G)), which(duplicated(K_G)) - 1:sum(duplicated(K_G)))] = 1
   chol = chol %*% t(expand)
   chol = as.matrix(Matrix::bdiag(replicate(n / 1000, chol, simplify = FALSE)))
 
@@ -145,7 +146,7 @@ grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replic
 # qs = 20 * 1:5
 # grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "q"))
 
-PARAMETER_ID = 2 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
+PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]

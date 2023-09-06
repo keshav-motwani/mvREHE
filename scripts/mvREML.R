@@ -13,7 +13,16 @@ mvREML = function(Y, D_0, D_1) {
   source("scripts/lme4 - multi/functions/lformulaMV.R")
 
   colnames(Y) = paste("y.", 1:ncol(Y), sep = "")
-  id_genetic = id_envir = 1:nrow(Y)
+
+  expand = diag(1, nrow(D_1), nrow(D_1))
+  expand = expand[, !duplicated(D_1)]
+  expand[cbind(which(duplicated(D_1)), which(duplicated(D_1)) - 1:sum(duplicated(D_1)))] = 1
+  id_genetic = apply(expand, 1, function(x) which(x == 1))
+  D_1 = D_1[!duplicated(D_1), !duplicated(D_1)]
+  colnames(D_1) = rownames(D_1) = unique(id_genetic)
+
+  id_envir = 1:nrow(Y)
+
   Ydata = data.frame(Y, id_genetic = id_genetic, id_envir = id_envir)
   mYdata = melt(data.frame(Ydata, obs = seq(nrow(Ydata))), id.var = c("obs", "id_genetic", "id_envir"), variable.name = "variable")
   mYdata = cbind(id_unique = 1:nrow(mYdata),mYdata)
