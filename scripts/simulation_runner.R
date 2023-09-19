@@ -23,7 +23,7 @@ squared_error = function(A, B) {
 
 diag_squared_error = function(A, B) {
   if (!is.null(A) & !is.null(B)) {
-    sum(diag(A - B)^2)
+    sqrt(sum(diag(A - B)^2))
   } else {
     NA
   }
