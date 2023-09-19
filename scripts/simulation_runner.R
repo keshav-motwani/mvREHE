@@ -51,16 +51,16 @@ hcp_kinship = function(n) {
   K_G = as.matrix(K_G)
   order = hclust(as.dist(-K_G))$order
   K_G = K_G[order, order]
-  K_G = K_G[1:1000, 1:1000]
+  K_G = K_G[1:min(n, 1000), 1:min(n, 1000)]
 
   chol = chol(K_G[!duplicated(K_G), !duplicated(K_G)])
-  expand = diag(1, 1000, 1000)
+  expand = diag(1, nrow(K_G), nrow(K_G))
   expand = expand[, !duplicated(K_G)]
   expand[cbind(which(duplicated(K_G)), which(duplicated(K_G)) - 1:sum(duplicated(K_G)))] = 1
   chol = chol %*% t(expand)
-  chol = as.matrix(Matrix::bdiag(replicate(n / 1000, chol, simplify = FALSE)))
+  chol = as.matrix(Matrix::bdiag(replicate(ceiling(n / 1000), chol, simplify = FALSE)))
 
-  K_G = as.matrix(Matrix::bdiag(replicate(n / 1000, K_G, simplify = FALSE)))
+  K_G = as.matrix(Matrix::bdiag(replicate(ceiling(n / 1000), K_G, simplify = FALSE)))
   attr(K_G, "chol") = chol
 
   K_G
@@ -137,7 +137,7 @@ simulation = function(n, q, r, method) {
 methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "cv_mvREHE_L2")
 replicates = 1:50
 rs = c(Inf)
-ns = c(1000, 2000, 4000, 8000)
+ns = c(250, 500, 1000, 2000, 4000, 8000)
 qs = c(20, 100)
 grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
 qs = 5

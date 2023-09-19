@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --constraint=amd
-#SBATCH --array=1-640
+#SBATCH --array=1-960
 #SBATCH --mail-user=keshav.motwani@ufl.edu
 #SBATCH --mail-type=END
 #SBATCH --account=amolstad

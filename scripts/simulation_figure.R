@@ -1,6 +1,6 @@
 library(tidyverse)
 
-RESULT_PATH = "simulation_results/"
+RESULT_PATH = "simulation_hcp_results/"
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
