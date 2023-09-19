@@ -9,6 +9,8 @@
 #' @examples
 mvHE = function(Y, D_list) {
 
+  if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
+
   q = ncol(Y)
 
   Sigma_hat = replicate(length(D_list), matrix(NA, q, q), simplify = FALSE)

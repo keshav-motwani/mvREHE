@@ -66,18 +66,20 @@ void compute_W_list(const arma::mat & Y, const List & D_list, List & W_list, con
   int i = 0;
   int l = 0;
 
-  for (R_xlen_t j = 0; j < s; j++) {
+  for (R_xlen_t k = 0; k < K; k++) {
 
-    i = row_indices(j);
-    l = col_indices(j);
+    NumericMatrix D_ = D_list[k];
+    arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
+    NumericMatrix W_ = W_list[k];
+    arma::mat W(W_.begin(), W_.nrow(), W_.ncol(), false);
 
-    YtY = Y.row(i).t() * Y.row(l);
+    for (R_xlen_t j = 0; j < s; j++) {
 
-    for (R_xlen_t k = 0; k < K; k++) {
-      NumericMatrix D_ = D_list[k];
-      arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
-      NumericMatrix W_ = W_list[k];
-      arma::mat W(W_.begin(), W_.nrow(), W_.ncol(), false);
+      i = row_indices(j);
+      l = col_indices(j);
+
+      YtY = Y.row(i).t() * Y.row(l);
+
       if (i == l) {
         W += D(i, l) * YtY;
       } else {

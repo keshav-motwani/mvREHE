@@ -1,16 +1,21 @@
-mvREML = function(Y, D_0, D_1) {
+library(devtools)
+library(optimx)
+library(reshape2)
+library(Matrix)
 
-  library(devtools)
-  library(optimx)
-  library(reshape2)
-  library(Matrix)
+library(lme4)
+attach(loadNamespace("lme4"), name = "lme4_all")
 
-  library(lme4)
-  attach(loadNamespace("lme4"), name = "lme4_all")
+source("scripts/lme4 - multi/functions/mkBlistMV.R")
+source("scripts/lme4 - multi/functions/mkReTrmsMV.R")
+source("scripts/lme4 - multi/functions/lformulaMV.R")
 
-  source("scripts/lme4 - multi/functions/mkBlistMV.R")
-  source("scripts/lme4 - multi/functions/mkReTrmsMV.R")
-  source("scripts/lme4 - multi/functions/lformulaMV.R")
+mvREML = function(Y, D_list) {
+
+  D_0 = D_list[[1]]
+  D_1 = D_list[[2]]
+
+  if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
   colnames(Y) = paste("y.", 1:ncol(Y), sep = "")
 

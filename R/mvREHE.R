@@ -1,78 +1,3 @@
-#' cv_mvREHE_rank
-#'
-#' @param Y
-#' @param D_list
-#' @param K
-#' @param n_rank
-#' @param rank_max
-#' @param rank_min
-#' @param tolerance
-#' @param max_iter
-#' @param Sigma_init_list
-#'
-#' @return
-#' @export
-#'
-#' @examples
-cv_mvREHE_rank = function(Y, D_list, K = 5, n_rank = 10, rank_max = ncol(Y), rank_min = 1, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
-
-  folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
-
-  q = ncol(Y)
-
-  rank_seq = unique(floor(seq(rank_min, rank_max, length.out = n_rank)))
-  rank_grid = do.call(expand.grid, replicate(length(D_list), rank_seq, simplify = F))
-
-  loss = numeric(nrow(rank_grid))
-
-  D_list_mk_list = vector(mode = "list", length = K)
-  W_list_mk_list = vector(mode = "list", length = K)
-  Q_mk_list = vector(mode = "list", length = K)
-  D_list_k_list = vector(mode = "list", length = K)
-  for (k in 1:K) {
-    D_list_mk_list[[k]] = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
-    W_list_mk_list[[k]] = lapply(1:length(D_list), function(x) matrix(0, q, q))
-    compute_W_list(Y[-folds[[k]], ], D_list_mk_list[[k]], W_list_mk_list[[k]])
-    Q_mk_list[[k]] = compute_Q(D_list_mk_list[[k]])
-    D_list_k_list[[k]] = lapply(D_list, function(D) D[folds[[k]], folds[[k]]])
-  }
-
-  for (l in 1:nrow(rank_grid)) {
-    cat(l)
-    loss_l = 0
-    for (k in 1:K) {
-      cat(k)
-      Sigma_hat = mvREHE(Y[-folds[[k]], ], D_list_mk_list[[k]], r = as.numeric(rank_grid[l, ]), lambda = NULL, tolerance, max_iter, Sigma_init_list, W_list = W_list_mk_list[[k]], Q = Q_mk_list[[k]])$Sigma_hat
-      loss_l = loss_l + length(folds[[k]])^2 * loss(Y[folds[[k]], ], D_list_k_list[[k]], Sigma_hat, rep(0, length(D_list)))
-    }
-    loss[l] = loss_l
-  }
-
-  l = which.min(loss)
-  rank = rank_grid[l, ]
-  cat("\n")
-  print(rank)
-
-  result = mvREHE(Y, D_list, r = rank, lambda = NULL, tolerance, max_iter, Sigma_init_list)
-  result$cv_loss = loss
-  result$rank = rank
-  result$rank_grid = rank_grid
-
-  result
-
-}
-
-log_seq = function(from, to, length) {
-
-  sequence = exp(seq(log(from), log(to), length.out = length))
-
-  sequence[1] = from
-  if (length > 1) sequence[length] = to
-
-  sequence
-
-}
-
 #' cv_mvREHE_L2
 #'
 #' @param Y
@@ -90,6 +15,8 @@ log_seq = function(from, to, length) {
 #'
 #' @examples
 cv_mvREHE_L2 = function(Y, D_list, K = 5, folds = NULL, grid = FALSE, n_lambda = 10, lambda_max = 1e-3, lambda_min = 1e-6, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL) {
+
+  if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
   if (is.null(folds)) {
     folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y)/K)))
@@ -126,15 +53,15 @@ cv_mvREHE_L2 = function(Y, D_list, K = 5, folds = NULL, grid = FALSE, n_lambda =
     row_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 1] - 1
     col_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 2] - 1
     W_list_mk_list[[k]] = lapply(1:length(D_list), function(x) matrix(0, q, q))
-    compute_W_list(Y[-folds[[k]], ], D_list_mk_list[[k]], W_list_mk_list[[k]], row_indices_mk_list[[k]], col_indices_mk_list[[k]])
+    compute_W_list(Y[-folds[[k]], , drop = FALSE], D_list_mk_list[[k]], W_list_mk_list[[k]], row_indices_mk_list[[k]], col_indices_mk_list[[k]])
   }
 
   cv_loss = function(lambda) {
     loss_l = 0
     for (k in 1:K) {
       cat(k)
-      Sigma_hat = mvREHE(Y[-folds[[k]], ], D_list_mk_list[[k]], r = NULL, lambda = 10^lambda, tolerance, max_iter, Sigma_init_list, W_list = W_list_mk_list[[k]], Q = Q_mk_list[[k]], row_indices = row_indices_mk_list[[k]], col_indices = col_indices_mk_list[[k]])$Sigma_hat
-      loss_l = loss_l + length(folds[[k]])^2 * loss(Y[folds[[k]], ], D_list_k_list[[k]], Sigma_hat, row_indices_k_list[[k]], col_indices_k_list[[k]], rep(0, length(D_list)))
+      Sigma_hat = mvREHE(Y[-folds[[k]], , drop = FALSE], D_list_mk_list[[k]], lambda = 10^lambda, tolerance, max_iter, Sigma_init_list, W_list = W_list_mk_list[[k]], Q = Q_mk_list[[k]], row_indices = row_indices_mk_list[[k]], col_indices = col_indices_mk_list[[k]])$Sigma_hat
+      loss_l = loss_l + length(folds[[k]])^2 * loss(Y[folds[[k]], , drop = FALSE], D_list_k_list[[k]], Sigma_hat, row_indices_k_list[[k]], col_indices_k_list[[k]], rep(0, length(D_list)))
     }
     return(loss_l)
   }
@@ -157,7 +84,7 @@ cv_mvREHE_L2 = function(Y, D_list, K = 5, folds = NULL, grid = FALSE, n_lambda =
   cat("\n")
   print(lambda)
 
-  result = mvREHE(Y, D_list, r = NULL, lambda = as.numeric(lambda), tolerance, max_iter, Sigma_init_list)
+  result = mvREHE(Y, D_list, lambda = as.numeric(lambda), tolerance, max_iter, Sigma_init_list)
   result$cv_loss = loss
   result$lambda = lambda
   result$lambda_grid = lambda_grid
@@ -178,17 +105,18 @@ cv_mvREHE_L2 = function(Y, D_list, K = 5, folds = NULL, grid = FALSE, n_lambda =
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
+mvREHE = function(Y, D_list, lambda = NULL, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
+
+  if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
   n = nrow(Y)
   q = ncol(Y)
   K = length(D_list)
   objective = numeric(max_iter)
 
-  if (is.null(r)) r = rep(q, K)
   if (is.null(lambda)) lambda = rep(0, K)
   if (is.null(Sigma_init_list)) {
-    Sigma_list = lapply(1:length(D_list), function(i) clusterGeneration::rcorrmatrix(q))
+    Sigma_list = lapply(1:length(D_list), function(i) diag(1, q, q))
   } else if (is.character(Sigma_init_list) && Sigma_init_list == "mvHE") {
     Sigma_list = mvHE(Y, D_list)$Sigma_hat
   } else {
@@ -215,7 +143,7 @@ mvREHE = function(Y, D_list, r = NULL, lambda = NULL, tolerance = NULL, max_iter
       for (k in setdiff(1:K, z)) {
         mat = mat - Sigma_list[[k]] * Q[k, z]
       }
-      eig = RSpectra::eigs_sym(mat, r[z])
+      eig = eigen(mat)
       Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(eig$values / (Q[z, z] + (lambda[z] * n^2)), 0))
     }
 
