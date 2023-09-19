@@ -2,7 +2,7 @@ library(mvREHE)
 library(Matrix)
 source("scripts/mvREML.R")
 
-RESULT_PATH = "simulation_hcp_results/"
+RESULT_PATH = "simulation_hcp_results_uvmv/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 spectral_error = function(A, B) {
@@ -23,7 +23,7 @@ squared_error = function(A, B) {
 
 diag_squared_error = function(A, B) {
   if (!is.null(A) & !is.null(B)) {
-    norm(diag(A - B), "F")
+    sum(diag(A - B)^2)
   } else {
     NA
   }
