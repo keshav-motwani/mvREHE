@@ -187,10 +187,12 @@ experiment = grid[PARAMETER_ID, "experiment"]
 set.seed(replicate, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
 output = simulation(n, q, r, method)
 
+diag_squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), diag_squared_error = output$diag_squared_error, n = n, q = q, r = r, method = method, experiment = experiment)
+squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), squared_error = output$squared_error, n = n, q = q, r = r, method = method, experiment = experiment)
 spectral_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), spectral_error = output$spectral_error, n = n, q = q, r = r, method = method, experiment = experiment)
 time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, r = r, experiment = experiment)
 truncated = data.frame(estimate = c("Sigma_0", "Sigma_1"), truncated = output$truncated, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment)
 min_eigenvalue = data.frame(estimate = c("Sigma_0", "Sigma_1"), min_eigenvalue = output$min_eigenvalue, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment)
 
-saveRDS(list(output = output, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_r", r, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
-print(list(spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
+saveRDS(list(output = output, diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_r", r, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
+print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
