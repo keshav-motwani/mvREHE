@@ -13,6 +13,22 @@ spectral_error = function(A, B) {
   }
 }
 
+squared_error = function(A, B) {
+  if (!is.null(A) & !is.null(B)) {
+    norm(A - B, "F")
+  } else {
+    NA
+  }
+}
+
+diag_squared_error = function(A, B) {
+  if (!is.null(A) & !is.null(B)) {
+    norm(diag(A - B), "F")
+  } else {
+    NA
+  }
+}
+
 make_low_rank = function(A, r) {
 
   eig = eigen(A)
@@ -67,6 +83,24 @@ hcp_kinship = function(n) {
 
 }
 
+univariate = function(Y, D_list, method_fn) {
+
+  q = ncol(Y)
+
+  estimates = apply(Y, 2, FUN = method_fn, D_list = D_list, simplify = FALSE)
+
+  Sigma_hat = lapply(1:length(D_list), function(i) matrix(0, q, q))
+
+  for (j in 1:q) {
+    for (k in 1:length(D_list)) {
+      Sigma_hat[[k]][j, j] = estimates[[j]]$Sigma_hat[[k]][1, 1]
+    }
+  }
+
+  return(list(Sigma_hat = Sigma_hat))
+
+}
+
 simulation = function(n, q, r, method) {
 
   # D_1 = ar1_cor(n, 10, 0.5)
@@ -89,26 +123,20 @@ simulation = function(n, q, r, method) {
 
   Y = Gamma_1 + Epsilon
 
-  Sigma_init_list = lapply(1:2, function(i) clusterGeneration::rcorrmatrix(q))
-  L_init_list = lapply(Sigma_init_list, function(i) t(chol(i)))
-
   if (method == "mvHE") {
     time = system.time({estimate = mvHE(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREHE") {
-    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
-  } else if (method == "mvREHE_L2") {
-    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), lambda = c(1e-5, 1e-5), Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = mvREHE(Y, list(D_0, D_1))})[3]
   } else if (method == "cv_mvREHE_L2") {
-    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list, lambda_min = 1e-8, n_lambda = 20)})[3]
-  } else if (method == "mvREHE_rank") {
-    time = system.time({estimate = mvREHE(Y, list(D_0, D_1), r = c(q, min(q, r)), Sigma_init_list = Sigma_init_list)})[3]
-  } else if (method == "cv_mvREHE_rank") {
-    time = system.time({estimate = cv_mvREHE_rank(Y, list(D_0, D_1), Sigma_init_list = Sigma_init_list)})[3]
+    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREML") {
     time = system.time({estimate = mvREML(Y, D_0, D_1)})[3]
-  } else if (method == "naive") {
-    time = NA
-    estimate = list(Sigma_hat = list(clusterGeneration::rcorrmatrix(q), clusterGeneration::rcorrmatrix(q)))
+  } else if (method == "HE") {
+    time = system.time({estimate = univariate(Y, list(D_0, D_1), mvHE)})[3]
+  } else if (method == "REHE") {
+    time = system.time({estimate = univariate(Y, list(D_0, D_1), mvREHE)})[3]
+  } else if (method == "REML") {
+    time = system.time({estimate = univariate(Y, list(D_0, D_1), mvREML)})[3]
   }
 
   if (method == "mvHE") {
@@ -129,12 +157,14 @@ simulation = function(n, q, r, method) {
     true = list(Sigma_0, Sigma_1),
     truncated = truncated,
     min_eigenvalue = min_eigenvalue,
-    spectral_error = mapply(spectral_error, estimate$Sigma_hat, list(Sigma_0, Sigma_1))
+    spectral_error = mapply(spectral_error, estimate$Sigma_hat, list(Sigma_0, Sigma_1)),
+    squared_error = mapply(squared_error, estimate$Sigma_hat, list(Sigma_0, Sigma_1)),
+    diag_squared_error = mapply(diag_squared_error, estimate$Sigma_hat, list(Sigma_0, Sigma_1))
   ))
 
 }
 
-methods = c("mvHE", "mvREHE", "naive", "mvREHE_L2", "cv_mvREHE_L2")
+methods = c("mvHE", "mvREHE", "cv_mvREHE_L2", "HE", "REHE", "REML")
 replicates = 1:50
 rs = c(Inf)
 ns = c(250, 500, 1000, 2000, 4000, 8000)

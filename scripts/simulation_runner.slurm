@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --constraint=amd
-#SBATCH --array=1-960
+#SBATCH --array=1-570
 #SBATCH --mail-user=keshav.motwani@ufl.edu
 #SBATCH --mail-type=END
 #SBATCH --account=amolstad
@@ -15,7 +15,7 @@ export OMP_NUM_THREADS=1
 
 ml R
 
-PER_TASK=5
+PER_TASK=10
 
 START_NUM=$(( ($SLURM_ARRAY_TASK_ID - 1) * $PER_TASK + 1 ))
 END_NUM=$(( $SLURM_ARRAY_TASK_ID * $PER_TASK ))

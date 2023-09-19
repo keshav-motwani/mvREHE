@@ -7,7 +7,6 @@
 mvREHE(
   Y,
   D_list,
-  r = NULL,
   lambda = NULL,
   tolerance = NULL,
   max_iter = 100,
