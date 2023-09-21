@@ -1,9 +1,5 @@
 library(mvREHE)
 library(Matrix)
-source("scripts/mvREML.R")
-
-RESULT_PATH = "simulation_hcp_results_uvmv/"
-dir.create(RESULT_PATH, recursive = TRUE)
 
 spectral_error = function(A, B) {
   if (!is.null(A) & !is.null(B)) {
@@ -38,6 +34,20 @@ make_low_rank = function(A, r) {
 
   A
 
+}
+
+simulate_Sigma = function(q) {
+  if (q <= 100) {
+    matrix = clusterGeneration::rcorrmatrix(q)
+    sqrt_matrix = sqrt_matrix(matrix)
+  } else {
+    blocks = lapply(1:(q / 100), function(x) clusterGeneration::rcorrmatrix(100))
+    sqrt_blocks = lapply(blocks, sqrt_matrix)
+    matrix = as.matrix(Matrix::bdiag(blocks))
+    sqrt_matrix = as.matrix(Matrix::bdiag(sqrt_blocks))
+  }
+  attr(matrix, "sqrt") = sqrt_matrix
+  matrix
 }
 
 sqrt_matrix = function(A) {
@@ -110,8 +120,8 @@ simulation = function(n, q, r, method) {
 
   colnames(D_0) = colnames(D_1) = rownames(D_0) = rownames(D_1) = as.character(1:n)
 
-  Sigma_1 = make_low_rank(clusterGeneration::rcorrmatrix(q), min(q, r))
-  Sigma_0 = make_low_rank(clusterGeneration::rcorrmatrix(q), q)
+  Sigma_1 = simulate_Sigma(q)
+  Sigma_0 = simulate_Sigma(q)
 
   chol_D_1 = attr(D_1, "chol")
   chol_D_0 = D_0
@@ -123,6 +133,16 @@ simulation = function(n, q, r, method) {
 
   Y = Gamma_1 + Epsilon
 
+  if (grepl("-", method)) {
+    PC = TRUE
+    PC_Y = prcomp(Y, center = TRUE, scale. = FALSE)
+    R = as.numeric(gsub("R", "", strsplit(method, "-")[[1]][1]))
+    Y = PC_Y$x[, 1:R]
+    method = strsplit(method, "-")[[1]][2]
+  } else {
+    PC = FALSE
+  }
+
   if (method == "mvHE") {
     time = system.time({estimate = mvHE(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREHE") {
@@ -130,13 +150,19 @@ simulation = function(n, q, r, method) {
   } else if (method == "cv_mvREHE_L2") {
     time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREML") {
-    time = system.time({estimate = mvREML(Y, D_0, D_1)})[3]
+    source("scripts/mvREML.R")
+    time = system.time({estimate = mvREML(Y, list(D_0, D_1))})[3]
   } else if (method == "HE") {
     time = system.time({estimate = univariate(Y, list(D_0, D_1), mvHE)})[3]
   } else if (method == "REHE") {
     time = system.time({estimate = univariate(Y, list(D_0, D_1), mvREHE)})[3]
   } else if (method == "REML") {
+    source("scripts/mvREML.R")
     time = system.time({estimate = univariate(Y, list(D_0, D_1), mvREML)})[3]
+  }
+
+  if (PC) {
+    estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(x) PC_Y$rotation[, 1:R] %*% x %*% t(PC_Y$rotation[, 1:R]))
   }
 
   if (method == "mvHE") {
@@ -164,19 +190,29 @@ simulation = function(n, q, r, method) {
 
 }
 
-methods = c("mvHE", "mvREHE", "cv_mvREHE_L2", "HE", "REHE", "REML")
+SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+
+RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
+dir.create(RESULT_PATH, recursive = TRUE)
+
+ns = c(500, 1000, 2000, 4000, 8000)
 replicates = 1:50
 rs = c(Inf)
-ns = c(250, 500, 1000, 2000, 4000, 8000)
-qs = c(20, 100)
-grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
-qs = 5
-grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, experiment = "n"))
-# ns = c(1000, 4000)
-# qs = 20 * 1:5
-# grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "q"))
 
-PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+if (SIMULATION_ID == 1) {
+  methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
+  qs = c(20, 100)
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
+  qs = 5
+  grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, experiment = "n"))
+} else if (SIMULATION_ID == 2) {
+  methods = c(paste0("R", c(5, 10, 50, 100), "-mvREHE"), "mvREHE", paste0("R", c(5, 10), "-mvREML"))
+  qs = c(500, 1000, 2000)
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
+}
+
+PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[2])
+print(grid[PARAMETER_ID, ])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]
