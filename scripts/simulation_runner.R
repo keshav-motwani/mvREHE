@@ -36,7 +36,7 @@ make_low_rank = function(A, r) {
 
 }
 
-simulate_Sigma = function(q) {
+generate_uniform_Sigma = function(q) {
   if (q <= 100) {
     matrix = clusterGeneration::rcorrmatrix(q)
     sqrt_matrix = sqrt_matrix(matrix)
@@ -50,11 +50,50 @@ simulate_Sigma = function(q) {
   matrix
 }
 
-sqrt_matrix = function(A) {
+generate_fast_Sigma = function(q) {
+  V = pracma::randortho(q)
+  matrix = V %*% diag(1/(1:q)^1) %*% t(V)
+  attr(matrix, "sqrt") = V %*% diag(1/(1:q)^0.5) %*% t(V)
+  matrix
+}
 
+generate_slow_Sigma = function(q) {
+  V = pracma::randortho(q)
+  matrix = V %*% diag(1/(1:q)^0.5) %*% t(V)
+  attr(matrix, "sqrt") = V %*% diag(1/(1:q)^0.25) %*% t(V)
+  matrix
+}
+
+smooth_basis = function(q, n) {
+  x = seq(0, 1, 1/n)[1:n]
+  V = matrix(NA, n, q)
+  V[, 1] = 1
+  for (j in 2:q) {
+    if (j %% 2 == 0) {
+      V[, j] = sqrt(2) * cos(pi * j * x)
+    } else {
+      V[, j] = sqrt(2) * sin(pi * (j - 1) * x)
+    }
+  }
+  return(V / sqrt(n))
+}
+
+generate_smooth_Sigma = function(q) {
+  V = smooth_basis(q, q)
+  matrix = V %*% diag(1/(1:q)^0.5) %*% t(V)
+  attr(matrix, "sqrt") = sqrt_matrix(matrix)
+  matrix
+}
+
+generate_constant_Sigma = function(q) {
+  matrix = diag(1, q, q)
+  attr(matrix, "sqrt") = matrix
+  matrix
+}
+
+sqrt_matrix = function(A) {
   eig = eigen(A)
   eig$vec %*% diag(sqrt(eig$val)) %*% t(eig$vec)
-
 }
 
 ar1_cor = function(n, m, rho) {
@@ -111,7 +150,7 @@ univariate = function(Y, D_list, method_fn) {
 
 }
 
-simulation = function(n, q, r, method) {
+simulation = function(n, q, r, Sigma, method, replicate) {
 
   # D_1 = ar1_cor(n, 10, 0.5)
   D_1 = hcp_kinship(n)
@@ -120,14 +159,16 @@ simulation = function(n, q, r, method) {
 
   colnames(D_0) = colnames(D_1) = rownames(D_0) = rownames(D_1) = as.character(1:n)
 
-  Sigma_1 = simulate_Sigma(q)
-  Sigma_0 = simulate_Sigma(q)
+  set.seed(123)
+  Sigma_1 = get(paste0("generate_", Sigma, "_Sigma"))(q)
+  Sigma_0 = get(paste0("generate_", Sigma, "_Sigma"))(q)
 
   chol_D_1 = attr(D_1, "chol")
   chol_D_0 = D_0
   sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
   sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
 
+  set.seed(replicate)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
 
@@ -195,20 +236,27 @@ SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
 dir.create(RESULT_PATH, recursive = TRUE)
 
-ns = c(500, 1000, 2000, 4000, 8000)
 replicates = 1:50
 rs = c(Inf)
 
 if (SIMULATION_ID == 1) {
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
+  Sigmas = "uniform"
+  ns = c(500, 1000, 2000, 4000, 8000, 16000)
   qs = c(20, 100)
-  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
   qs = 5
-  grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, experiment = "n"))
+  grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
 } else if (SIMULATION_ID == 2) {
-  methods = c(paste0("R", c(5, 10, 50, 100), "-mvREHE"), "mvREHE", paste0("R", c(5, 10), "-mvREML"))
-  qs = c(500, 1000, 2000)
-  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, experiment = "n")
+  methods = c(paste0("R", c(5, 10, 50, 100), "-mvREHE"), "mvREHE", paste0("R", c(5), "-mvREML"))
+  Sigmas = c("constant", "slow", "fast")
+  ns = c(500, 1000, 2000, 4000, 8000, 16000)
+  qs = 1000
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
+} else if (SIMULATION_ID == 3) {
+  Sigmas = "smooth"
+  qs = c(100, 200, 400, 800, 1600)
+  ns = 2000
 }
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[2])
@@ -217,18 +265,18 @@ replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]
 r = grid[PARAMETER_ID, "r"]
-method = grid[PARAMETER_ID, "method"]
+Sigma = grid[PARAMETER_ID, "Sigma"]
+method = as.character(grid[PARAMETER_ID, "method"])
 experiment = grid[PARAMETER_ID, "experiment"]
 
-set.seed(replicate, kind = "Mersenne-Twister", normal.kind = "Inversion", sample.kind = "Rejection")
-output = simulation(n, q, r, method)
+output = simulation(n, q, r, Sigma, method, replicate)
 
-diag_squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), diag_squared_error = output$diag_squared_error, n = n, q = q, r = r, method = method, experiment = experiment)
-squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), squared_error = output$squared_error, n = n, q = q, r = r, method = method, experiment = experiment)
-spectral_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), spectral_error = output$spectral_error, n = n, q = q, r = r, method = method, experiment = experiment)
-time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, r = r, experiment = experiment)
-truncated = data.frame(estimate = c("Sigma_0", "Sigma_1"), truncated = output$truncated, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment)
-min_eigenvalue = data.frame(estimate = c("Sigma_0", "Sigma_1"), min_eigenvalue = output$min_eigenvalue, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment)
+diag_squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), diag_squared_error = output$diag_squared_error, n = n, q = q, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), squared_error = output$squared_error, n = n, q = q, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+spectral_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), spectral_error = output$spectral_error, n = n, q = q, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, r = r, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+truncated = data.frame(estimate = c("Sigma_0", "Sigma_1"), truncated = output$truncated, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+min_eigenvalue = data.frame(estimate = c("Sigma_0", "Sigma_1"), min_eigenvalue = output$min_eigenvalue, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 
 saveRDS(list(output = output, diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_r", r, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
 print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
