@@ -250,7 +250,7 @@ if (SIMULATION_ID == 1) {
 } else if (SIMULATION_ID == 2) {
   methods = c(paste0("R", c(5, 10, 50, 100), "-mvREHE"), "mvREHE", paste0("R", c(5), "-mvREML"))
   Sigmas = c("constant", "slow", "fast")
-  ns = c(500, 1000, 2000, 4000, 8000, 16000)
+  ns = c(500, 1000, 2000, 4000, 8000)
   qs = 1000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
 } else if (SIMULATION_ID == 3) {
@@ -271,12 +271,12 @@ experiment = grid[PARAMETER_ID, "experiment"]
 
 output = simulation(n, q, r, Sigma, method, replicate)
 
-diag_squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), diag_squared_error = output$diag_squared_error, n = n, q = q, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), squared_error = output$squared_error, n = n, q = q, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-spectral_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), spectral_error = output$spectral_error, n = n, q = q, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, r = r, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-truncated = data.frame(estimate = c("Sigma_0", "Sigma_1"), truncated = output$truncated, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-min_eigenvalue = data.frame(estimate = c("Sigma_0", "Sigma_1"), min_eigenvalue = output$min_eigenvalue, n = n, q = q, r = r, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+diag_squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), diag_squared_error = output$diag_squared_error, n = n, q = q, Sigma = Sigma, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+squared_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), squared_error = output$squared_error, n = n, q = q, Sigma = Sigma, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+spectral_error = data.frame(replicate = replicate, estimate = c("Sigma_0", "Sigma_1"), spectral_error = output$spectral_error, n = n, q = q, Sigma = Sigma, r = r, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, Sigma = Sigma, r = r, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+truncated = data.frame(estimate = c("Sigma_0", "Sigma_1"), truncated = output$truncated, n = n, q = q, Sigma = Sigma, r = r, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+min_eigenvalue = data.frame(estimate = c("Sigma_0", "Sigma_1"), min_eigenvalue = output$min_eigenvalue, n = n, q = q, Sigma = Sigma, r = r, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 
-saveRDS(list(output = output, diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_r", r, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
+saveRDS(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_r", r, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
 print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
