@@ -1,25 +1,38 @@
 library(mvREHE)
 library(Matrix)
 
-spectral_error = function(A, B) {
-  if (!is.null(A) & !is.null(B)) {
-    norm(A - B, "2")
+expand_estimate = function(estimate, size) {
+  kronecker(estimate, tcrossprod(rep(1, size / ncol(estimate))))
+}
+
+spectral_error = function(estimate, truth) {
+  if (!is.null(estimate) & !is.null(truth)) {
+    if (ncol(truth) > ncol(estimate)) {
+      estimate = expand_estimate(estimate, ncol(truth))
+    }
+    norm(estimate - truth, "2")
   } else {
     NA
   }
 }
 
-squared_error = function(A, B) {
-  if (!is.null(A) & !is.null(B)) {
-    norm(A - B, "F")
+squared_error = function(estimate, truth) {
+  if (!is.null(estimate) & !is.null(truth)) {
+    if (ncol(truth) > ncol(estimate)) {
+      estimate = expand_estimate(estimate, ncol(truth))
+    }
+    norm(estimate - truth, "F")
   } else {
     NA
   }
 }
 
-diag_squared_error = function(A, B) {
-  if (!is.null(A) & !is.null(B)) {
-    sqrt(sum(diag(A - B)^2))
+diag_squared_error = function(estimate, truth) {
+  if (!is.null(estimate) & !is.null(truth)) {
+    if (ncol(truth) > ncol(estimate)) {
+      estimate = expand_estimate(estimate, ncol(truth))
+    }
+    sqrt(sum(diag(estimate - truth)^2))
   } else {
     NA
   }
@@ -64,32 +77,31 @@ generate_slow_Sigma = function(q) {
   matrix
 }
 
-smooth_basis = function(q, n) {
-  x = seq(0, 1, 1/n)[1:n]
-  V = matrix(NA, n, q)
-  V[, 1] = 1
-  for (j in 2:q) {
-    if (j %% 2 == 0) {
-      V[, j] = sqrt(2) * cos(pi * j * x)
-    } else {
-      V[, j] = sqrt(2) * sin(pi * (j - 1) * x)
-    }
-  }
-  return(V / sqrt(n))
-}
-
-generate_smooth_Sigma = function(q) {
-  V = smooth_basis(q, q)
-  matrix = V %*% diag(1/(1:q)^0.5) %*% t(V)
-  attr(matrix, "sqrt") = sqrt_matrix(matrix)
-  matrix
-}
-
 generate_constant_Sigma = function(q) {
   matrix = diag(1, q, q)
   attr(matrix, "sqrt") = matrix
   matrix
 }
+
+
+generate_smooth_Sigma = function(q, alpha, K = 50) {
+
+  phi_k = function(t,k) cos(pi*k*t)
+  lambda_sqrt_k = function(alpha,k) k^(-alpha)
+  t_grid = seq(0, 1, length.out = q)
+
+  eigs_sqrt_0 = sapply(1:K, function(kk) lambda_sqrt_k(alpha, kk))
+  basis = sapply(1:K, function(kk) phi_k(t_grid,kk))
+
+  matrix = basis %*% diag(eigs_sqrt_0^2) %*% t(basis)
+  attr(matrix, "sqrt") = sqrt_matrix(matrix)
+
+  matrix
+
+}
+
+generate_smooth_1_Sigma = function(q) generate_smooth_Sigma(q, 1)
+generate_smooth_2_Sigma = function(q) generate_smooth_Sigma(q, 2)
 
 sqrt_matrix = function(A) {
   eig = eigen(A)
@@ -150,6 +162,30 @@ univariate = function(Y, D_list, method_fn) {
 
 }
 
+smooth_cov = function(cov, diag = FALSE, output_size = 1000) {
+
+  obsGrid = seq(0, 1, length.out = ncol(cov))
+  rcov = list()
+  rcov$dataType = "Dense"
+  rcov$tPairs = as.matrix(expand.grid(obsGrid, obsGrid))
+  if (!diag) {
+    indices = rcov$tPairs[, 1] != rcov$tPairs[, 2]
+  } else {
+    indices = 1:nrow(rcov$tPairs)
+  }
+  rcov$tPairs = rcov$tPairs[indices, ]
+  rcov$cxxn = c(cov)[indices]
+
+  gcvObj = fdapace:::GCVLwls2DV2(obsGrid, obsGrid, kern = "epan", rcov = rcov, t = list(obsGrid))
+  bwCov = gcvObj$h
+  out = seq(0, 1, length.out = output_size)
+  smoothCov = fdapace:::Lwls2D(bwCov, "epan", xin=rcov$tPairs, yin=rcov$cxxn,
+                               xout1=out, xout2=out)
+
+  smoothCov
+
+}
+
 simulation = function(n, q, r, Sigma, method, replicate) {
 
   # D_1 = ar1_cor(n, 10, 0.5)
@@ -168,13 +204,18 @@ simulation = function(n, q, r, Sigma, method, replicate) {
   sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
   sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
 
+  if (grepl("smooth", Sigma)) {
+    Sigma_0 = Sigma_0 + diag(1, q, q)
+    sqrt_Sigma_0 = sqrt_matrix(Sigma_0)
+  }
+
   set.seed(replicate)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
 
   Y = Gamma_1 + Epsilon
 
-  if (grepl("-", method)) {
+  if (grepl("-", method) && substring(method, 1, 1) == "R") {
     PC = TRUE
     PC_Y = prcomp(Y, center = TRUE, scale. = FALSE)
     R = as.numeric(gsub("R", "", strsplit(method, "-")[[1]][1]))
@@ -184,12 +225,17 @@ simulation = function(n, q, r, Sigma, method, replicate) {
     PC = FALSE
   }
 
+  if (grepl("smoothed", method)) {
+    smoothed = TRUE
+    method = gsub("-smoothed", "", method)
+  } else {
+    smoothed = FALSE
+  }
+
   if (method == "mvHE") {
     time = system.time({estimate = mvHE(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREHE") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1))})[3]
-  } else if (method == "cv_mvREHE_L2") {
-    time = system.time({estimate = cv_mvREHE_L2(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREML") {
     source("scripts/mvREML.R")
     time = system.time({estimate = mvREML(Y, list(D_0, D_1))})[3]
@@ -206,8 +252,12 @@ simulation = function(n, q, r, Sigma, method, replicate) {
     estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(x) PC_Y$rotation[, 1:R] %*% x %*% t(PC_Y$rotation[, 1:R]))
   }
 
+  if (smoothed) {
+    time = system.time({estimate$Sigma_hat = lapply(estimate$Sigma_hat, smooth_cov)})[3] + time
+  }
+
   if (method == "mvHE") {
-    truncated = truncated = 1 * c(attr(estimate$Sigma_hat[[1]], "truncated"), attr(estimate$Sigma_hat[[2]], "truncated"))
+    truncated = 1 * c(attr(estimate$Sigma_hat[[1]], "truncated"), attr(estimate$Sigma_hat[[2]], "truncated"))
   } else {
     truncated = c(0, 0)
   }
@@ -216,6 +266,11 @@ simulation = function(n, q, r, Sigma, method, replicate) {
     min_eigenvalue = c(attr(estimate$Sigma_hat[[1]], "min_eigenvalue"), attr(estimate$Sigma_hat[[2]], "min_eigenvalue"))
   } else {
     min_eigenvalue = c(0, 0)
+  }
+
+  if (grepl("smooth", Sigma)) {
+    Sigma_1 = get(paste0("generate_", Sigma, "_Sigma"))(1000)
+    Sigma_0 = get(paste0("generate_", Sigma, "_Sigma"))(1000)
   }
 
   return(list(
@@ -254,9 +309,14 @@ if (SIMULATION_ID == 1) {
   qs = 1000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
 } else if (SIMULATION_ID == 3) {
-  Sigmas = "smooth"
-  qs = c(100, 200, 400, 800, 1600)
-  ns = 2000
+  methods = c("mvHE", "mvREHE", "mvHE-smoothed", "mvREHE-smoothed")
+  Sigmas = c("smooth_1", "smooth_2")
+  qs = c(25, 50, 100, 200)
+  ns = 100
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "q")
+  qs = 100
+  ns = c(25, 50, 100, 200, 400)
+  grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
 }
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[2])
