@@ -34,7 +34,7 @@ for (exp in c("n", "q")) {
            filter(experiment == exp) %>%
            mutate(facet = Sigma_labels[Sigma]) %>%
            mutate(facet = factor(facet, levels = Sigma_labels)),
-         aes(x = n, y = log10(time), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+         aes(x = !!exp, y = log10(time), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
     facet_wrap(~facet, scales = "free_y", nrow = 1, labeller = labeller(facet = label_parsed)) +
     geom_line() +
     theme_bw() +
@@ -58,7 +58,7 @@ for (exp in c("n", "q")) {
            filter(experiment == exp & grepl("mv", method)) %>%
            mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
            mutate(facet = factor(facet, levels = Sigmas)),
-         aes(x = as.factor(n), y = spectral_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
+         aes(x = as.factor(!!exp), y = spectral_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
     facet_wrap(~facet, scales = "free_y", nrow = 2, dir = "v", labeller = labeller(facet = label_parsed)) +
     geom_boxplot(outlier.size = 0) +
     theme_bw() +
@@ -77,7 +77,7 @@ for (exp in c("n", "q")) {
            filter(experiment == exp & grepl("mv", method)) %>%
            mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
            mutate(facet = factor(facet, levels = Sigmas)),
-         aes(x = as.factor(n), y = squared_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
+         aes(x = as.factor(!!exp), y = squared_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
     facet_wrap(~facet, scales = "free_y", nrow = 2, dir = "v", labeller = labeller(facet = label_parsed)) +
     geom_boxplot(outlier.size = 0) +
     theme_bw() +
@@ -96,7 +96,7 @@ for (exp in c("n", "q")) {
            filter(experiment == exp) %>%
            mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
            mutate(facet = factor(facet, levels = Sigmas)),
-         aes(x = as.factor(n), y = diag_squared_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"))) +
+         aes(x = as.factor(!!exp), y = diag_squared_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"))) +
     facet_wrap(~facet, scales = "free_y", nrow = 2, dir = "v", labeller = labeller(facet = label_parsed)) +
     geom_boxplot(outlier.size = 0) +
     theme_bw() +
