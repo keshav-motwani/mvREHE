@@ -33,7 +33,7 @@ for (exp in c("n", "q")) {
   ggplot(time_df %>%
            filter(experiment == exp) %>%
            mutate(facet = Sigma_labels[Sigma]) %>%
-           mutate(facet = factor(facet, levels = Sigmas)),
+           mutate(facet = factor(facet, levels = Sigma_labels)),
          aes(x = n, y = log10(time), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
     facet_wrap(~facet, scales = "free_y", nrow = 1, labeller = labeller(facet = label_parsed)) +
     geom_line() +
