@@ -311,7 +311,7 @@ if (SIMULATION_ID == 1) {
 } else if (SIMULATION_ID == 3) {
   methods = c("mvHE", "mvREHE")
   Sigmas = c("smooth_1", "smooth_2")
-  qs = c(25, 50, 100, 200, 400, 800, 1600)
+  qs = c(25, 50, 100, 200, 500, 1000)
   ns = 500
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "q")
   qs = 100
