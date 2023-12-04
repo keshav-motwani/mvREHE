@@ -105,7 +105,7 @@ generate_smooth_2_Sigma = function(q) generate_smooth_Sigma(q, 2)
 
 sqrt_matrix = function(A) {
   eig = eigen(A)
-  eig$vec %*% diag(sqrt(eig$val)) %*% t(eig$vec)
+  eig$vec %*% diag(sqrt(pmax(eig$val, 0))) %*% t(eig$vec)
 }
 
 ar1_cor = function(n, m, rho) {
@@ -252,10 +252,6 @@ simulation = function(n, q, r, Sigma, method, replicate) {
     estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(x) PC_Y$rotation[, 1:R] %*% x %*% t(PC_Y$rotation[, 1:R]))
   }
 
-  if (smoothed) {
-    time = system.time({estimate$Sigma_hat = lapply(estimate$Sigma_hat, smooth_cov)})[3] + time
-  }
-
   if (method == "mvHE") {
     truncated = 1 * c(attr(estimate$Sigma_hat[[1]], "truncated"), attr(estimate$Sigma_hat[[2]], "truncated"))
   } else {
@@ -266,6 +262,10 @@ simulation = function(n, q, r, Sigma, method, replicate) {
     min_eigenvalue = c(attr(estimate$Sigma_hat[[1]], "min_eigenvalue"), attr(estimate$Sigma_hat[[2]], "min_eigenvalue"))
   } else {
     min_eigenvalue = c(0, 0)
+  }
+
+  if (smoothed) {
+    time = system.time({estimate$Sigma_hat = lapply(estimate$Sigma_hat, smooth_cov)})[3] + time
   }
 
   if (grepl("smooth", Sigma)) {
@@ -312,10 +312,10 @@ if (SIMULATION_ID == 1) {
   methods = c("mvHE", "mvREHE", "mvHE-smoothed", "mvREHE-smoothed")
   Sigmas = c("smooth_1", "smooth_2")
   qs = c(25, 50, 100, 200)
-  ns = 100
+  ns = 400
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "q")
   qs = 100
-  ns = c(25, 50, 100, 200, 400)
+  ns = c(25, 50, 100, 200, 400, 800, 1600, 3200)
   grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
 }
 
