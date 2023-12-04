@@ -309,13 +309,13 @@ if (SIMULATION_ID == 1) {
   qs = 1000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
 } else if (SIMULATION_ID == 3) {
-  methods = c("mvHE", "mvREHE", "mvHE-smoothed", "mvREHE-smoothed")
+  methods = c("mvHE", "mvREHE")
   Sigmas = c("smooth_1", "smooth_2")
-  qs = c(25, 50, 100, 200)
-  ns = 400
+  qs = c(25, 50, 100, 200, 400, 800, 1600)
+  ns = 500
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "q")
   qs = 100
-  ns = c(25, 50, 100, 200, 400, 800, 1600, 3200)
+  ns = c(125, 250, 500, 1000, 2000, 4000)
   grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
 }
 
