@@ -204,10 +204,10 @@ simulation = function(n, q, r, Sigma, method, replicate) {
   sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
   sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
 
-  if (grepl("smooth", Sigma)) {
-    Sigma_0 = Sigma_0 + diag(1, q, q)
-    sqrt_Sigma_0 = sqrt_matrix(Sigma_0)
-  }
+#  if (grepl("smooth", Sigma)) {
+#    Sigma_0 = Sigma_0 + diag(1, q, q)
+#    sqrt_Sigma_0 = sqrt_matrix(Sigma_0)
+#  }
 
   set.seed(replicate)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
