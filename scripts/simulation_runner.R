@@ -215,10 +215,10 @@ simulation = function(n, q, r, Sigma, method, replicate) {
 
   Y = Gamma_1 + Epsilon
 
-  if (grepl("-", method) && substring(method, 1, 1) == "R") {
+  if (grepl("-", method) && substring(method, 1, 2) == "DR") {
     PC = TRUE
-    PC_Y = prcomp(Y, center = TRUE, scale. = FALSE)
-    R = as.numeric(gsub("R", "", strsplit(method, "-")[[1]][1]))
+    PC_Y = prcomp(Y, center = FALSE, scale. = FALSE)
+    R = as.numeric(gsub("DR", "", strsplit(method, "-")[[1]][1]))
     Y = PC_Y$x[, 1:R]
     method = strsplit(method, "-")[[1]][2]
   } else {
@@ -236,6 +236,10 @@ simulation = function(n, q, r, Sigma, method, replicate) {
     time = system.time({estimate = mvHE(Y, list(D_0, D_1))})[3]
   } else if (method == "mvREHE") {
     time = system.time({estimate = mvREHE(Y, list(D_0, D_1))})[3]
+  } else if (method == "mvREHE_cvL2") {
+    time = system.time({estimate = mvREHE_cvL2(Y, list(D_0, D_1), K = 5)})[3]
+  } else if (method == "mvREHE_cvDR") {
+    time = system.time({estimate = mvREHE_cvDR(Y, list(D_0, D_1), K = 5, V_seq = intersect(1:q, c(5, 10, 50, 100, q)))})[3]
   } else if (method == "mvREML") {
     source("scripts/mvREML.R")
     time = system.time({estimate = mvREML(Y, list(D_0, D_1))})[3]
@@ -294,7 +298,7 @@ dir.create(RESULT_PATH, recursive = TRUE)
 replicates = 1:50
 rs = c(Inf)
 
-if (SIMULATION_ID == 1) {
+if (SIMULATION_ID == 1) { # 4800
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
   Sigmas = "uniform"
   ns = c(500, 1000, 2000, 4000, 8000, 16000)
@@ -302,21 +306,18 @@ if (SIMULATION_ID == 1) {
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
   qs = 5
   grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
-} else if (SIMULATION_ID == 2) {
-  methods = c(paste0("R", c(5, 10, 50, 100), "-mvREHE"), "mvREHE", paste0("R", c(5), "-mvREML"))
+} else if (SIMULATION_ID == 2) { # 3000
+  methods = c("mvREHE", "mvREHE_cvL2", "mvREHE_cvDR", paste0("DR", c(5), "-mvREML"))
   Sigmas = c("constant", "slow", "fast")
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = 1000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
-} else if (SIMULATION_ID == 3) {
-  methods = c("mvHE", "mvREHE")
+} else if (SIMULATION_ID == 3) { # 2400
+  methods = c("mvHE", "mvREHE", "mvHE-smoothed", "mvREHE-smoothed")
   Sigmas = c("smooth_1", "smooth_2")
-  qs = c(25, 50, 100, 200, 500, 1000)
-  ns = 500
-  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "q")
   qs = 100
   ns = c(125, 250, 500, 1000, 2000, 4000)
-  grid = rbind(grid, expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
 }
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[2])
