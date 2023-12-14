@@ -1,13 +1,13 @@
 library(tidyverse)
 
-SIMULATION_ID = 2 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
-RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
+SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+RESULT_PATH = paste0("final_simulation_hcp_results_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
 methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
-palette = ggsci::pal_npg("nrc")(4)
-names(palette) = c("HE", "REHE", "REML", "cv_REHE_L2")
+palette = ggsci::pal_npg("nrc")(3)
+names(palette) = c("HE", "REHE", "REML")
 options(ggplot2.discrete.colour = palette)
 map = gsub("mv", "", methods)
 names(map) = methods

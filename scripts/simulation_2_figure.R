@@ -1,11 +1,11 @@
 library(tidyverse)
 
 SIMULATION_ID = 2
-RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
+RESULT_PATH = paste0("final_simulation_hcp_results_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
-methods = c(paste0("R", c(5, 10, 50, 100), "-mvREHE"), "mvREHE", paste0("R", c(5), "-mvREML"))
+methods = c("mvREHE", "mvREHE_cvL2", "mvREHE_cvDR", paste0("R", c(5), "-mvREML"))
 palette = ggsci::pal_aaas("default")(length(methods))
 names(palette) = methods
 options(ggplot2.discrete.colour = palette)

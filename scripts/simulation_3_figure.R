@@ -1,7 +1,7 @@
 library(tidyverse)
 
 SIMULATION_ID = 3
-RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
+RESULT_PATH = paste0("final_simulation_hcp_results_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
@@ -21,7 +21,7 @@ results = lapply(files, readRDS)
 Sigma_labels = c("alpha == 1", "alpha == 2")
 names(Sigma_labels) = c("smooth_1", "smooth_2")
 
-for (exp in c("n", "q")) {
+for (exp in c("n")) {
 
   ### Time
 
@@ -63,7 +63,7 @@ for (exp in c("n", "q")) {
     geom_boxplot(outlier.size = 0) +
     theme_bw() +
     xlab(exp) +
-    labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
+    labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = exp) +
     theme(legend.position = "bottom")
   ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_spectral_error_", exp, ".pdf")), height = 5, width = 8.5)
 
@@ -82,7 +82,7 @@ for (exp in c("n", "q")) {
     geom_boxplot(outlier.size = 0) +
     theme_bw() +
     xlab(exp) +
-    labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"["F"]), x = "n") +
+    labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"["F"]), x = exp) +
     theme(legend.position = "bottom")
   ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", exp, ".pdf")), height = 5, width = 8.5)
 
@@ -101,7 +101,7 @@ for (exp in c("n", "q")) {
     geom_boxplot(outlier.size = 0) +
     theme_bw() +
     xlab(exp) +
-    labs(color = "Method", linetype = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +
+    labs(color = "Method", linetype = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = exp) +
     theme(legend.position = "bottom")
   ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_diag_squared_error_", exp, ".pdf")), height = 5, width = 8.5)
 
