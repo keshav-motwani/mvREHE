@@ -41,7 +41,7 @@ for (exp in c("n")) {
     xlab(exp) +
     labs(color = "Method", linetype = "Method", y = "log10(seconds)") +
     theme(legend.position = "bottom")
-  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_time_", exp, ".pdf")), height = 3, width = 8.5)
+  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_time_", exp, ".pdf")), height = 3, width = 8.5 * 2 / 3)
 
   label = c("hat(C)[E]", "hat(C)[G]")
   names(label) = c("Sigma_0", "Sigma_1")
@@ -65,7 +65,7 @@ for (exp in c("n")) {
     xlab(exp) +
     labs(color = "Method", linetype = "Method", y = expression(integral(integral((hat(C)[k](s, t) - C[k](s, t)))^2)*ds*dt), x = exp) +
     theme(legend.position = "bottom")
-  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", exp, ".pdf")), height = 5, width = 8.5)
+  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", exp, ".pdf")), height = 5, width = 8.5 * 2 / 3)
 
   ### Squared error on diagonal
 
@@ -84,6 +84,6 @@ for (exp in c("n")) {
     xlab(exp) +
     labs(color = "Method", linetype = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = exp) +
     theme(legend.position = "bottom")
-  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_diag_squared_error_", exp, ".pdf")), height = 5, width = 8.5)
+  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_diag_squared_error_", exp, ".pdf")), height = 5, width = 8.5 * 2 / 3)
 
 }
