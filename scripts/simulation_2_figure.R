@@ -5,14 +5,14 @@ RESULT_PATH = paste0("final_simulation_hcp_results_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
-methods = c("mvREHE", "mvREHE_cvL2", "mvREHE_cvDR", paste0("R", c(5), "-mvREML"))
+methods = c("mvREHE", "mvREHE_cvL2", "mvREHE_cvDR", paste0("DR", c(5), "-mvREML"))
 palette = ggsci::pal_aaas("default")(length(methods))
 names(palette) = methods
 options(ggplot2.discrete.colour = palette)
 map = methods
 names(map) = methods
 
-Sigmas = c("fast", "slow", "constant")
+Sigmas = c("fast", "moderate", "slow")
 
 files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]

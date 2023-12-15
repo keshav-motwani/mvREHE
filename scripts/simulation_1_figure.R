@@ -1,6 +1,6 @@
 library(tidyverse)
 
-SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+SIMULATION_ID = 1
 RESULT_PATH = paste0("final_simulation_hcp_results_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
