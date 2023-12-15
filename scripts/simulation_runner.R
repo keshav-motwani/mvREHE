@@ -65,6 +65,13 @@ generate_uniform_Sigma = function(q) {
 
 generate_fast_Sigma = function(q) {
   V = pracma::randortho(q)
+  matrix = V %*% diag(1/(1:q)^1.25) %*% t(V)
+  attr(matrix, "sqrt") = V %*% diag(1/(1:q)^(1.25/2)) %*% t(V)
+  matrix
+}
+
+generate_moderate_Sigma = function(q) {
+  V = pracma::randortho(q)
   matrix = V %*% diag(1/(1:q)^1) %*% t(V)
   attr(matrix, "sqrt") = V %*% diag(1/(1:q)^0.5) %*% t(V)
   matrix
@@ -72,8 +79,8 @@ generate_fast_Sigma = function(q) {
 
 generate_slow_Sigma = function(q) {
   V = pracma::randortho(q)
-  matrix = V %*% diag(1/(1:q)^0.5) %*% t(V)
-  attr(matrix, "sqrt") = V %*% diag(1/(1:q)^0.25) %*% t(V)
+  matrix = V %*% diag(1/(1:q)^0.75) %*% t(V)
+  attr(matrix, "sqrt") = V %*% diag(1/(1:q)^(0.75/2)) %*% t(V)
   matrix
 }
 
@@ -301,14 +308,14 @@ rs = c(Inf)
 if (SIMULATION_ID == 1) { # 4800
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
   Sigmas = "uniform"
-  ns = c(500, 1000, 2000, 4000, 8000, 16000)
+  ns = c(250, 500, 1000, 2000, 4000, 8000)
   qs = c(20, 100)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
   qs = 5
   grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
 } else if (SIMULATION_ID == 2) { # 3000
   methods = c("mvREHE", "mvREHE_cvL2", "mvREHE_cvDR", paste0("DR", c(5), "-mvREML"))
-  Sigmas = c("constant", "slow", "fast")
+  Sigmas = c("fast", "moderate", "slow")
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = 1000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n")
