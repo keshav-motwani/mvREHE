@@ -42,7 +42,7 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, widt
 
 ### Spectral error
 
-label = c("hat(Sigma)[0]", "hat(Sigma)[1]")
+label = c("hat(Sigma)[E]", "hat(Sigma)[G]")
 names(label) = c("Sigma_0", "Sigma_1")
 
 Sigmas = apply(expand.grid(label, Sigmas), 1, function(x) paste0(x[2], "~(", x[1], ")"))

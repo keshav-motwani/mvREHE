@@ -43,29 +43,10 @@ for (exp in c("n")) {
     theme(legend.position = "bottom")
   ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_time_", exp, ".pdf")), height = 3, width = 8.5)
 
-  ### Spectral error
-
-  label = c("hat(Sigma)[0]", "hat(Sigma)[1]")
+  label = c("hat(C)[E]", "hat(C)[G]")
   names(label) = c("Sigma_0", "Sigma_1")
 
   Sigmas = apply(expand.grid(label, Sigma_labels), 1, function(x) paste0(x[2], "~(", x[1], ")"))
-
-  spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)) %>%
-    mutate(estimate = label[estimate]) %>%
-    filter(method %in% methods)
-
-  ggplot(spectral_error_df %>%
-           filter(experiment == exp & grepl("mv", method)) %>%
-           mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-           mutate(facet = factor(facet, levels = Sigmas)),
-         aes(x = as.factor(get(exp)), y = spectral_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
-    facet_wrap(~facet, scales = "free_y", nrow = 2, dir = "v", labeller = labeller(facet = label_parsed)) +
-    geom_boxplot(outlier.size = 0) +
-    theme_bw() +
-    xlab(exp) +
-    labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = exp) +
-    theme(legend.position = "bottom")
-  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_spectral_error_", exp, ".pdf")), height = 5, width = 8.5)
 
   ### Squared error
 
@@ -82,7 +63,7 @@ for (exp in c("n")) {
     geom_boxplot(outlier.size = 0) +
     theme_bw() +
     xlab(exp) +
-    labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"["F"]), x = exp) +
+    labs(color = "Method", linetype = "Method", y = expression(integral(integral((hat(C)[k](s, t) - C[k](s, t)))^2)*ds*dt), x = exp) +
     theme(legend.position = "bottom")
   ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", exp, ".pdf")), height = 5, width = 8.5)
 
