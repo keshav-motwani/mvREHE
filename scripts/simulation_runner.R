@@ -355,5 +355,5 @@ time = data.frame(replicate = replicate, method = method, time = output$time, n 
 truncated = data.frame(estimate = estimate, truncated = output$truncated, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 min_eigenvalue = data.frame(estimate = estimate, min_eigenvalue = output$min_eigenvalue, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 
-saveRDS(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_r", r, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
+saveRDS(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
 print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
