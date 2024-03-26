@@ -15,14 +15,14 @@
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-3, max_iter = 100, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
+mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
   n = nrow(Y)
   q = ncol(Y)
   K = length(D_list)
-  objective = numeric(max_iter)
+  difference = numeric(max_iter)
 
   if (is.null(lambda)) lambda = rep(0, K)
   if (is.null(Sigma_init_list)) {
@@ -64,8 +64,8 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-3, max_iter = 100, Si
       # if (iter > 1 && abs(objective[iter - 1] - objective[iter]) / objective[iter - 1] < tolerance) {
       #   break
       # }
-      objective[iter] = mean(mapply(Sigma_list_old, Sigma_list, FUN = function(x, y) norm(x - y, "F") / norm(x, "F")), na.rm = TRUE)
-      if (iter > 1 && objective[iter] < tolerance) {
+      difference[iter] = mean(mapply(Sigma_list_old, Sigma_list, FUN = function(x, y) norm(x - y, "F") / norm(x, "F")), na.rm = TRUE)
+      if (iter > 1 && difference[iter] < tolerance) {
         break
       }
     }
@@ -73,7 +73,7 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-3, max_iter = 100, Si
   }
 
   return(list(Sigma_hat = Sigma_list,
-              objective = objective[objective != 0]))
+              difference = difference[difference != 0]))
 
 }
 
@@ -188,6 +188,7 @@ mvREHE_cvDR = function(Y, D_list, V_seq, K = 5, folds = NULL, tolerance = 1e-3, 
 
   result = mvREHE_DR(Y, D_list, V = V, tolerance, max_iter, Sigma_init_list = NULL)
   result$cv_loss = loss
+  result$V_seq = V_seq
   result$V = V
 
   result
