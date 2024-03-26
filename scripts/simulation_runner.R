@@ -320,7 +320,7 @@ if (SIMULATION_ID == 1) { # 4800
   qs = c(20, 100)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
   qs = 5
-  grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, r = rs, Sigma = Sigmas, experiment = "n"))
+  grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n"))
 } else if (SIMULATION_ID == 2) { # 3000
   methods = c("mvHE", "mvREHE", "mvREHE_cvDR", paste0("DR", c(5), "-mvREML"))
   Sigmas = c("fast", "moderate", "slow")
