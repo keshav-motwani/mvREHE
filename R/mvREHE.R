@@ -33,7 +33,7 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-3, max_iter = 100, Si
     Sigma_list = Sigma_init_list
   }
   if (is.null(row_indices) && (!is.null(tolerance) | is.null(W_list))) {
-    indices = do.call(`+`, D_list) > 0
+    indices = Reduce(`+`, D_list) > 0
     indices = indices & lower.tri(indices, diag = TRUE)
     row_indices = which(indices, arr.ind = TRUE)[, 1] - 1
     col_indices = which(indices, arr.ind = TRUE)[, 2] - 1
@@ -295,11 +295,11 @@ precompute_cv = function(Y, D_list, folds, compute_W = TRUE) {
     D_list_k_list[[k]] = lapply(D_list, function(D) D[folds[[k]], folds[[k]]])
     D_list_mk_list[[k]] = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
     Q_mk_list[[k]] = compute_Q(D_list_mk_list[[k]])
-    indices = do.call(`+`, D_list_k_list[[k]]) > 0
+    indices = Reduce(`+`, D_list_k_list[[k]]) > 0
     indices = indices & lower.tri(indices, diag = TRUE)
     row_indices_k_list[[k]] = which(indices, arr.ind = TRUE)[, 1] - 1
     col_indices_k_list[[k]] = which(indices, arr.ind = TRUE)[, 2] - 1
-    indices = do.call(`+`, D_list_mk_list[[k]]) > 0
+    indices = Reduce(`+`, D_list_mk_list[[k]]) > 0
     indices = indices & lower.tri(indices, diag = TRUE)
     row_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 1] - 1
     col_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 2] - 1

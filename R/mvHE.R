@@ -15,7 +15,7 @@ mvHE = function(Y, D_list) {
 
   Sigma_hat = replicate(length(D_list), matrix(NA, q, q), simplify = FALSE)
 
-  indices = do.call(`+`, D_list) > 0
+  indices = Reduce(`+`, D_list) > 0
   row_indices = which(indices, arr.ind = TRUE)[, 1]
   col_indices = which(indices, arr.ind = TRUE)[, 2]
   indices = which(indices)
