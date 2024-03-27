@@ -201,28 +201,38 @@ h2_prop = function(Sigma_list, G_index) {
 
 }
 
-max_principal_angle = function(Sigma_hat, Sigma_true, r) {
+max_principal_angle = function(estimate, truth, r) {
 
-  X = eigen(Sigma_hat)$vectors[, 1:r, drop = FALSE]
-  Y = eigen(Sigma_true)$vectors[, 1:r, drop = FALSE]
+  if (!is.null(estimate) & !is.null(truth)) {
 
-  # Normalize the columns of A and B using QR decomposition
-  if (ncol(X) != 1) {
-    qrX = qr(X)
-    qrY = qr(Y)
-    QX = qr.Q(qrX)
-    QY = qr.Q(qrY)
+    if (ncol(truth) > ncol(estimate)) {
+      estimate = expand_estimate(estimate, ncol(truth))
+    }
+
+    X = eigen(estimate)$vectors[, 1:r, drop = FALSE]
+    Y = eigen(truth)$vectors[, 1:r, drop = FALSE]
+
+    # Normalize the columns of A and B using QR decomposition
+    if (ncol(X) != 1) {
+      qrX = qr(X)
+      qrY = qr(Y)
+      QX = qr.Q(qrX)
+      QY = qr.Q(qrY)
+    } else {
+      QX = X
+      QY = Y
+    }
+
+    # Compute the SVD of the product of QA' and QB
+    svd_result = svd(t(QX) %*% QY)
+
+    # The singular values are the cosines of the principal angles
+    cos_theta = svd_result$d
+    max(acos(pmin(abs(cos_theta), 1))) * 180 / pi
+
   } else {
-    QX = X
-    QY = Y
+    NA
   }
-
-  # Compute the SVD of the product of QA' and QB
-  svd_result = svd(t(QX) %*% QY)
-
-  # The singular values are the cosines of the principal angles
-  cos_theta = svd_result$d
-  max(acos(pmin(abs(cos_theta), 1))) * 180 / pi
 
 }
 
@@ -237,10 +247,10 @@ simulation = function(n, q, Sigma, method, replicate) {
 
   set.seed(123)
   Sigma_0 = get(paste0("generate_", Sigma, "_Sigma"))(q)
-  Sigma_1 = get(paste0("generate_", Sigma, "_Sigma"))(q)
+  Sigma_1 = 2 * get(paste0("generate_", Sigma, "_Sigma"))(q)
   Sigma_2 = get(paste0("generate_", Sigma, "_Sigma"))(q)
   sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
-  sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
+  sqrt_Sigma_1 = sqrt(2) * attr(Sigma_1, "sqrt")
   sqrt_Sigma_2 = attr(Sigma_2, "sqrt")
 
   chol_D_0 = D_0
@@ -318,7 +328,7 @@ simulation = function(n, q, Sigma, method, replicate) {
   if (grepl("smooth", Sigma)) {
     set.seed(123)
     Sigma_0 = get(paste0("generate_", Sigma, "_Sigma"))(1000)
-    Sigma_1 = get(paste0("generate_", Sigma, "_Sigma"))(1000)
+    Sigma_1 = 2 * get(paste0("generate_", Sigma, "_Sigma"))(1000)
     Sigma_2 = get(paste0("generate_", Sigma, "_Sigma"))(1000)
   }
 
@@ -328,7 +338,7 @@ simulation = function(n, q, Sigma, method, replicate) {
   max_principal_angle = sapply(rs, function(r) mapply(max_principal_angle, estimate$Sigma_hat, true, r = r))
   rownames(max_principal_angle) = paste0("Sigma_", 1:length(D_list) - 1)
   colnames(max_principal_angle) = rs
-  max_principal_angle = melt(max_principal_angle, varnames = c("estimate", "r"))
+  max_principal_angle = reshape2::melt(max_principal_angle, varnames = c("estimate", "r"))
 
   return(list(
     time = time,
