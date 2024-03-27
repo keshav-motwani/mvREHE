@@ -195,6 +195,37 @@ smooth_cov = function(cov, diag = FALSE, output_size = 1000) {
 
 }
 
+h2_prop = function(Sigma_list, G_index) {
+
+  sum(diag(Sigma_list[[G_index]])) / sum(sapply(Sigma_list, function(x) sum(diag(x))))
+
+}
+
+max_principal_angle = function(Sigma_hat, Sigma_true, r) {
+
+  X = eigen(Sigma_hat)$vectors[, 1:r, drop = FALSE]
+  Y = eigen(Sigma_true)$vectors[, 1:r, drop = FALSE]
+
+  # Normalize the columns of A and B using QR decomposition
+  if (ncol(X) != 1) {
+    qrX = qr(X)
+    qrY = qr(Y)
+    QX = qr.Q(qrX)
+    QY = qr.Q(qrY)
+  } else {
+    QX = X
+    QY = Y
+  }
+
+  # Compute the SVD of the product of QA' and QB
+  svd_result = svd(t(QX) %*% QY)
+
+  # The singular values are the cosines of the principal angles
+  cos_theta = svd_result$d
+  max(acos(pmin(abs(cos_theta), 1))) * 180 / pi
+
+}
+
 simulation = function(n, q, Sigma, method, replicate) {
 
   D_0 = diag(1, nrow = n, ncol = n)
@@ -293,6 +324,12 @@ simulation = function(n, q, Sigma, method, replicate) {
 
   true = list(Sigma_0, Sigma_1, Sigma_2)
 
+  rs = intersect(c(1, 3, 5), 1:(q-1))
+  max_principal_angle = sapply(rs, function(r) mapply(max_principal_angle, estimate$Sigma_hat, true, r = r))
+  rownames(max_principal_angle) = paste0("Sigma_", 1:length(D_list) - 1)
+  colnames(max_principal_angle) = rs
+  max_principal_angle = melt(max_principal_angle, varnames = c("estimate", "r"))
+
   return(list(
     time = time,
     estimate = estimate,
@@ -301,7 +338,9 @@ simulation = function(n, q, Sigma, method, replicate) {
     min_eigenvalue = min_eigenvalue,
     spectral_error = mapply(spectral_error, estimate$Sigma_hat, true),
     squared_error = mapply(squared_error, estimate$Sigma_hat, true),
-    diag_squared_error = mapply(diag_squared_error, estimate$Sigma_hat, true)
+    diag_squared_error = mapply(diag_squared_error, estimate$Sigma_hat, true),
+    max_principal_angle = max_principal_angle,
+    h2_error = (h2_prop(estimate$Sigma_hat, 2) - h2_prop(true, 2))^2
   ))
 
 }
@@ -345,15 +384,19 @@ method = as.character(grid[PARAMETER_ID, "method"])
 experiment = grid[PARAMETER_ID, "experiment"]
 
 output = simulation(n, q, Sigma, method, replicate)
-
+output$max_principal_angle
 estimate = paste0("Sigma_", 1:3 - 1)
 
 diag_squared_error = data.frame(replicate = replicate, estimate = estimate, diag_squared_error = output$diag_squared_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 squared_error = data.frame(replicate = replicate, estimate = estimate, squared_error = output$squared_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 spectral_error = data.frame(replicate = replicate, estimate = estimate, spectral_error = output$spectral_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+h2_error = data.frame(replicate = replicate, h2_error = output$h2_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+max_principal_angle = cbind(output$max_principal_angle, replicate = replicate, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, Sigma = Sigma, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 truncated = data.frame(estimate = estimate, truncated = output$truncated, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 min_eigenvalue = data.frame(estimate = estimate, min_eigenvalue = output$min_eigenvalue, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 
 saveRDS(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
-print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
+# print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
+print(h2_error)
+print(max_principal_angle)
