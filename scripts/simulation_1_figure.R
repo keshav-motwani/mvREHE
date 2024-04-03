@@ -44,6 +44,8 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, widt
 label = c("hat(Sigma)[G]", "hat(Sigma)[C]", "hat(Sigma)[E]")
 names(label) = c("Sigma_1", "Sigma_2", "Sigma_0")
 
+facets = apply(expand.grid(label, paste0("q == ", c(5, 20, 100))), 1, function(x) paste0(x[2], "~(", x[1], ")"))
+
 spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)) %>%
   mutate(estimate = label[estimate]) %>%
   filter(method %in% methods)
@@ -51,7 +53,7 @@ spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)
 ggplot(spectral_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))) %>%
+         mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(spectral_error), se = sd(spectral_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
@@ -76,7 +78,7 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
 ggplot(squared_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))) %>%
+         mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(squared_error), se = sd(squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
@@ -101,7 +103,7 @@ diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_square
 ggplot(diag_squared_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))) %>%
+         mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(diag_squared_error), se = sd(diag_squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
@@ -128,7 +130,7 @@ h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
 ggplot(h2_df %>%
          filter(experiment == "n") %>%
          mutate(facet = paste0("q = ", q)) %>%
-         mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))),
+         mutate(facet = factor(facet, levels = facets)),
        aes(x = n, y = mean, ymin = mean - 1.96 * se, ymax = mean + 1.96 * se,
            color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
