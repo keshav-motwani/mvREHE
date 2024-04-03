@@ -107,8 +107,8 @@ ggplot(diag_squared_error_df %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(diag_squared_error), se = sd(diag_squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[gsub(".elapsed", "", method)], levels = names(palette))),
-           linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate")) +
+           color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)),
+           linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"))) +
   facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
