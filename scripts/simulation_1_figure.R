@@ -101,7 +101,7 @@ diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_square
   filter(method %in% methods)
 
 ggplot(diag_squared_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
+         filter(experiment == "n") %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
@@ -113,7 +113,7 @@ ggplot(diag_squared_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +
+  labs(color = "Method", linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA))
