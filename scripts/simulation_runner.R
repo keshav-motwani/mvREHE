@@ -245,13 +245,15 @@ simulation = function(n, q, Sigma, method, replicate) {
 
   colnames(D_0) = colnames(D_1) = colnames(D_2) = rownames(D_0) = rownames(D_1) = rownames(D_2) = as.character(1:n)
 
+  heritability_prop = c(0.8, 0.1, 0.1)
+
   set.seed(123)
-  Sigma_0 = get(paste0("generate_", Sigma, "_Sigma"))(q)
-  Sigma_1 = 2 * get(paste0("generate_", Sigma, "_Sigma"))(q)
-  Sigma_2 = get(paste0("generate_", Sigma, "_Sigma"))(q)
-  sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
-  sqrt_Sigma_1 = sqrt(2) * attr(Sigma_1, "sqrt")
-  sqrt_Sigma_2 = attr(Sigma_2, "sqrt")
+  Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(q)
+  Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(q)
+  Sigma_2 = heritability_prop[3] * get(paste0("generate_", Sigma, "_Sigma"))(q)
+  sqrt_Sigma_0 = sqrt(heritability_prop[1]) * attr(Sigma_0, "sqrt")
+  sqrt_Sigma_1 = sqrt(heritability_prop[2]) * attr(Sigma_1, "sqrt")
+  sqrt_Sigma_2 = sqrt(heritability_prop[3]) * attr(Sigma_2, "sqrt")
 
   chol_D_0 = D_0
   chol_D_1 = attr(D_1, "chol")
@@ -327,9 +329,9 @@ simulation = function(n, q, Sigma, method, replicate) {
 
   if (grepl("smooth", Sigma)) {
     set.seed(123)
-    Sigma_0 = get(paste0("generate_", Sigma, "_Sigma"))(1000)
-    Sigma_1 = 2 * get(paste0("generate_", Sigma, "_Sigma"))(1000)
-    Sigma_2 = get(paste0("generate_", Sigma, "_Sigma"))(1000)
+    Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
+    Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
+    Sigma_2 = heritability_prop[3] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
   }
 
   true = list(Sigma_0, Sigma_1, Sigma_2)
