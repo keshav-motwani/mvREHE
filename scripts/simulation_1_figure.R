@@ -130,7 +130,7 @@ h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
 ggplot(h2_df %>%
          filter(experiment == "n") %>%
          mutate(facet = paste0("q = ", q)) %>%
-         mutate(facet = factor(facet, levels = facets)),
+         mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))),
        aes(x = n, y = mean, ymin = mean - 1.96 * se, ymax = mean + 1.96 * se,
            color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
