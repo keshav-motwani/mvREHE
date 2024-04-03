@@ -101,3 +101,22 @@ ggplot(diag_squared_error_df %>%
   theme(legend.position = "bottom")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_diag_squared_error_n.pdf"), height = 7.5, width = 8.5)
 
+### h2 error
+
+h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
+  group_by(n, q, Sigma, experiment, method) %>%
+  summarize(h2_error = mean(h2_error)) %>%
+  filter(method %in% methods)
+
+ggplot(h2_df %>%
+         filter(experiment == "n") %>%
+         mutate(facet = Sigma) %>%
+         mutate(facet = factor(facet, levels = Sigmas)),
+       aes(x = n, y = h2_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+  facet_wrap(~facet, scales = "free_y", nrow = 1) +
+  geom_line() +
+  theme_bw() +
+  xlab("n") +
+  labs(color = "Method", linetype = "Method", y = "Heritability proportion error") +
+  theme(legend.position = "bottom")
+ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
