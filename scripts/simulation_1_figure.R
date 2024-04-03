@@ -44,8 +44,6 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, widt
 label = c("hat(Sigma)[G]", "hat(Sigma)[C]", "hat(Sigma)[E]")
 names(label) = c("Sigma_1", "Sigma_2", "Sigma_0")
 
-Sigmas = apply(expand.grid(label, Sigmas), 1, function(x) paste0(x[2], "~(", x[1], ")"))
-
 spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)) %>%
   mutate(estimate = label[estimate]) %>%
   filter(method %in% methods)
