@@ -341,7 +341,7 @@ simulation = function(n, q, Sigma, method, replicate) {
 
 }
 
-SIMULATION_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
+SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
 RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
 dir.create(RESULT_PATH, recursive = TRUE)
@@ -370,7 +370,7 @@ if (SIMULATION_ID == 1) { # 4800
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 }
 
-PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[2])
+PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[2])
 print(grid[PARAMETER_ID, ])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
