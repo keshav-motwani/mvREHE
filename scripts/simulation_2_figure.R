@@ -23,20 +23,22 @@ results = lapply(files, readRDS)
 
 time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
   group_by(n, q, Sigma, experiment, method) %>%
-  summarize(time = mean(time)) %>%
+  summarize(mean = mean(time), se = sd(time) / sqrt(n())) %>%
   filter(method %in% methods)
 
 ggplot(time_df %>%
          filter(experiment == "n") %>%
          mutate(facet = Sigma) %>%
          mutate(facet = factor(facet, levels = Sigmas)),
-       aes(x = n, y = log10(time), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+       aes(x = n, y = log10(mean), ymin = log10(mean - 1.96 * se), ymax = log10(mean + 1.96 * se), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
   geom_line() +
+  geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
   labs(color = "Method", linetype = "Method", y = "log10(seconds)") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, width = 8.5)
 
 ### Spectral error
@@ -53,15 +55,21 @@ spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)
 ggplot(spectral_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)),
-       aes(x = as.factor(n), y = spectral_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", nrow = 3, dir = "v", labeller = labeller(facet = label_parsed)) +
-  geom_boxplot(outlier.size = 0) +
+         mutate(facet = factor(facet, levels = Sigmas)) %>%
+         group_by(n, facet, method) %>%
+         summarize(mean = mean(spectral_error), se = sd(spectral_error) / sqrt(n())),
+       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
+           color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
+  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  geom_line() +
+  geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
-  theme(legend.position = "bottom")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 7.5, width = 8.5)
+  labs(color = "Method", linetype = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
+  theme(legend.position = "bottom") +
+  theme(strip.background = element_blank(), strip.placement = "outside") +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA))
+ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ### Squared error
 
@@ -72,15 +80,21 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
 ggplot(squared_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)),
-       aes(x = as.factor(n), y = squared_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", nrow = 3, dir = "v", labeller = labeller(facet = label_parsed)) +
-  geom_boxplot(outlier.size = 0) +
+         mutate(facet = factor(facet, levels = Sigmas)) %>%
+         group_by(n, facet, method) %>%
+         summarize(mean = mean(squared_error), se = sd(squared_error) / sqrt(n())),
+       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
+           color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
+  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  geom_line() +
+  geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"["F"]), x = "n") +
-  theme(legend.position = "bottom")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_squared_error_n.pdf"), height = 7.5, width = 8.5)
+  labs(color = "Method", linetype = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
+  theme(legend.position = "bottom") +
+  theme(strip.background = element_blank(), strip.placement = "outside") +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA))
+ggsave(file.path(FIGURES_PATH, "simulation_figure_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ### Squared error on diagonal
 
@@ -89,34 +103,41 @@ diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_square
   filter(method %in% methods)
 
 ggplot(diag_squared_error_df %>%
-         filter(experiment == "n") %>%
+         filter(experiment == "n" & grepl("mv", method)) %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)),
-       aes(x = as.factor(n), y = diag_squared_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"))) +
-  facet_wrap(~facet, scales = "free_y", nrow = 3, dir = "v", labeller = labeller(facet = label_parsed)) +
-  geom_boxplot(outlier.size = 0) +
+         mutate(facet = factor(facet, levels = Sigmas)) %>%
+         group_by(n, facet, method) %>%
+         summarize(mean = mean(diag_squared_error), se = sd(diag_squared_error) / sqrt(n())),
+       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
+           color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)))) +
+  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  geom_line() +
+  geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +
-  theme(legend.position = "bottom")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_diag_squared_error_n.pdf"), height = 7.5, width = 8.5)
+  labs(color = "Method", linetype = "Method", y = expression("E||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +   theme(legend.position = "bottom") +
+  theme(strip.background = element_blank(), strip.placement = "outside") +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA))
+ggsave(file.path(FIGURES_PATH, "simulation_figure_diag_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ### h2 error
 
 h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
   group_by(n, q, Sigma, experiment, method) %>%
-  summarize(h2_error = mean(h2_error)) %>%
+  summarize(mean = mean(h2_error), se = sd(h2_error) / sqrt(n())) %>%
   filter(method %in% methods)
 
 ggplot(h2_df %>%
          filter(experiment == "n") %>%
-         mutate(facet = Sigma) %>%
-         mutate(facet = factor(facet, levels = Sigmas)),
-       aes(x = n, y = h2_error, color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+         mutate(facet = Sigma),
+       aes(x = n, y = mean, ymin = mean - 1.96 * se, ymax = mean + 1.96 * se,
+           color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
   geom_line() +
+  geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = "Heritability proportion error") +
-  theme(legend.position = "bottom")
+  labs(color = "Method", linetype = "Method", y = expression(E(hat(h)^2 - h^2)^2)) +
+  theme(legend.position = "bottom") +
+  theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
