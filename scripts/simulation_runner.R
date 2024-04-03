@@ -212,23 +212,7 @@ max_principal_angle = function(estimate, truth, r) {
     X = eigen(estimate)$vectors[, 1:r, drop = FALSE]
     Y = eigen(truth)$vectors[, 1:r, drop = FALSE]
 
-    # Normalize the columns of A and B using QR decomposition
-    if (ncol(X) != 1) {
-      qrX = qr(X)
-      qrY = qr(Y)
-      QX = qr.Q(qrX)
-      QY = qr.Q(qrY)
-    } else {
-      QX = X
-      QY = Y
-    }
-
-    # Compute the SVD of the product of QA' and QB
-    svd_result = svd(t(QX) %*% QY)
-
-    # The singular values are the cosines of the principal angles
-    cos_theta = svd_result$d
-    max(acos(pmin(abs(cos_theta), 1))) * 180 / pi
+    pracma::subspace(X, Y) * 180 / pi
 
   } else {
     NA
@@ -357,7 +341,7 @@ simulation = function(n, q, Sigma, method, replicate) {
 
 }
 
-SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+SIMULATION_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
 RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
 dir.create(RESULT_PATH, recursive = TRUE)
@@ -386,7 +370,7 @@ if (SIMULATION_ID == 1) { # 4800
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 }
 
-PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[2])
+PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[2])
 print(grid[PARAMETER_ID, ])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
