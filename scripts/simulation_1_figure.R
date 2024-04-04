@@ -115,7 +115,7 @@ ggplot(spectral_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
+  labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
@@ -140,7 +140,7 @@ ggplot(squared_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
+  labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
@@ -165,7 +165,7 @@ ggplot(max_principal_angle_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = "Principal angle - 1 PC", x = "n") +
+  labs(color = "Method", y = "Principal angle - 1 PC", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
@@ -184,7 +184,7 @@ ggplot(max_principal_angle_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = "Max principal angle - 3 PCs", x = "n") +
+  labs(color = "Method", y = "Max principal angle - 3 PCs", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
