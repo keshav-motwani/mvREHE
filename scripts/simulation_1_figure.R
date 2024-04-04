@@ -34,7 +34,7 @@ ggplot(time_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = "log10(seconds)") +
+  labs(color = "Method", linetype = "", y = "log10(seconds)") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, width = 8.5)
@@ -64,7 +64,7 @@ ggplot(diag_squared_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +
+  labs(color = "Method", linetype = "", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
@@ -81,14 +81,14 @@ ggplot(h2_df %>%
          filter(experiment == "n") %>%
          mutate(facet = paste0("q = ", q)) %>%
          mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))),
-       aes(x = n, y = mean, ymin = mean - 1.96 * se, ymax = mean + 1.96 * se,
+       aes(x = n, y = sqrt(mean), ymin = sqrt(mean - 1.96 * se), ymax = sqrt(mean + 1.96 * se),
            color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression(E(hat(h)^2 - h^2)^2)) +
+  labs(color = "Method", linetype = "", y = expression(sqrt(E(hat(h)^2 - h^2)^2))) +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
@@ -115,7 +115,7 @@ ggplot(spectral_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
+  labs(color = "Method", linetype = "", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
@@ -140,7 +140,7 @@ ggplot(squared_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
+  labs(color = "Method", linetype = "", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
@@ -165,7 +165,7 @@ ggplot(max_principal_angle_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = "Principal angle - 1 PC", x = "n") +
+  labs(color = "Method", linetype = "", y = "Principal angle - 1 PC", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
@@ -184,7 +184,7 @@ ggplot(max_principal_angle_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "Method", y = "Max principal angle - 3 PCs", x = "n") +
+  labs(color = "Method", linetype = "", y = "Max principal angle - 3 PCs", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(0, NA))
