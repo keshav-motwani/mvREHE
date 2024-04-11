@@ -27,7 +27,7 @@ time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
   filter(method %in% methods)
 
 ggplot(time_df %>%
-         filter(experiment == exp) %>%
+         filter(experiment == "n") %>%
          mutate(facet = Sigma_labels[Sigma]) %>%
          mutate(facet = factor(facet, levels = Sigma_labels)),
        aes(x = n, y = log10(mean), ymin = log10(mean - 1.96 * se), ymax = log10(mean + 1.96 * se), color = factor(gsub(".elapsed", "", method), levels = names(palette)), group = method)) +
@@ -39,7 +39,7 @@ ggplot(time_df %>%
   labs(color = "Method", y = "log10(seconds)") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside")
-ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_time_", exp, ".pdf")), height = 3, width = 6)
+ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_time_", "n", ".pdf")), height = 3, width = 6)
 
 label = c("hat(Sigma)[G]", "hat(Sigma)[C]", "hat(Sigma)[E]")
 names(label) = c("Sigma_1", "Sigma_2", "Sigma_0")
@@ -65,6 +65,6 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
     geom_errorbar(width = 0.1) +
     theme_bw() +
     xlab("n") +
-    labs(color = "Method", linetype = "Method", y = expression(integral(integral((hat(C)[k](s, t) - C[k](s, t)))^2)*ds*dt), x = exp) +
+    labs(color = "Method", linetype = "Method", y = expression(integral(integral((hat(C)[k](s, t) - C[k](s, t)))^2)*ds*dt), x = "n") +
     theme(legend.position = "bottom")
-  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", exp, ".pdf")), height = 5, width = 6)
+  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", "n", ".pdf")), height = 5, width = 6)
