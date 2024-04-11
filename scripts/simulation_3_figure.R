@@ -66,5 +66,7 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
     theme_bw() +
     xlab("n") +
     labs(color = "Method", linetype = "Method", y = expression(integral(integral((hat(C)[k](s, t) - C[k](s, t)))^2)*ds*dt), x = "n") +
-    theme(legend.position = "bottom")
-  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", "n", ".pdf")), height = 5, width = 6)
+    theme(legend.position = "bottom") +
+    theme(strip.background = element_blank(), strip.placement = "outside") +
+    scale_y_continuous(limits = c(0, NA))
+  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", "n", ".pdf")), height = 7.5 * 0.8, width = 8.5)
