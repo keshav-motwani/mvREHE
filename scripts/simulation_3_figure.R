@@ -55,9 +55,9 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
   ggplot(squared_error_df %>%
            filter(experiment == "n" & grepl("mv", method)) %>%
            mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-           mutate(facet = factor(facet, levels = Sigmas)),
+           mutate(facet = factor(facet, levels = Sigmas)) %>%
            group_by(n, facet, method) %>%
-           summarize(mean = mean(squared_error) / 1000^2, se = sd(squared_error) / sqrt(n())) / 1000^2,
+           summarize(mean = mean(squared_error) / 1000^2, se = sd(squared_error) / sqrt(n()) / 1000^2),
          aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
              color = factor(method, levels = names(palette)))) +
     facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
