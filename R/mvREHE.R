@@ -33,7 +33,7 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
     Sigma_list = Sigma_init_list
   }
   if (is.null(row_indices) && (!is.null(tolerance) | is.null(W_list))) {
-    indices = Reduce(`+`, D_list) > 0
+    indices = abs(Reduce(`+`, D_list)) > .Machine$double.eps
     indices = indices & lower.tri(indices, diag = TRUE)
     row_indices = which(indices, arr.ind = TRUE)[, 1] - 1
     col_indices = which(indices, arr.ind = TRUE)[, 2] - 1
@@ -94,7 +94,7 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
 #' @export
 #'
 #' @examples
-mvREHE_DR = function(Y, D_list, V = NULL, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
+mvREHE_DR = function(Y, D_list, V = NULL, tolerance = NULL, max_iter = 100, Sigma_init_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL, s = NULL) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -107,17 +107,18 @@ mvREHE_DR = function(Y, D_list, V = NULL, tolerance = NULL, max_iter = 100, Sigm
   if (!is.matrix(V)) {
 
     V = min(V, min(nrow(Y), ncol(Y)))
-
-    s = svd(Y)
-    V = s$v[, 1:V]
+    V = svd_irlba(Y, V)$v
 
   }
 
   Yr = Y %*% V
 
   estimate = mvREHE(Yr, D_list, lambda = NULL, tolerance, max_iter, Sigma_init_list, W_list = NULL, Q, row_indices, col_indices)
+  Sigma_r_hat = estimate$Sigma_hat
 
-  estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(x) V %*% x %*% t(V))
+  estimate$Sigma_hat = NULL
+  estimate$Sigma_r_hat = Sigma_r_hat
+  estimate$V = V
 
   estimate
 
@@ -140,7 +141,7 @@ mvREHE_DR = function(Y, D_list, V = NULL, tolerance = NULL, max_iter = 100, Sigm
 #' @export
 #'
 #' @examples
-mvREHE_cvDR = function(Y, D_list, V_seq, K = 5, folds = NULL, tolerance = 1e-3, max_iter = 100) {
+mvREHE_cvDR = function(Y, D_list, r_seq = NULL, V_function = svd_irlba, K = 5, folds = NULL, tolerance = 1e-3, max_iter = 100) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -153,45 +154,59 @@ mvREHE_cvDR = function(Y, D_list, V_seq, K = 5, folds = NULL, tolerance = 1e-3, 
 
   q = ncol(Y)
 
-  precomputed_values = precompute_cv(Y, D_list, folds, compute_W = FALSE)
+  precomputed_values = precompute_cv(Y, D_list, folds, compute_W = FALSE, V_function = V_function, r = max(r_seq))
 
   cv = with(precomputed_values, {
 
-    loss = numeric(length(V_seq))
+    loss = numeric(length(r_seq))
 
-    cv_loss = function(V) {
+    cv_loss = function(r) {
       loss_l = 0
       for (k in 1:K) {
-        Sigma_hat = mvREHE_DR(Y[-folds[[k]], , drop = FALSE], D_list_mk_list[[k]], V = V, tolerance, max_iter, Sigma_init_list = NULL, Q = Q_mk_list[[k]], row_indices = row_indices_mk_list[[k]], col_indices = col_indices_mk_list[[k]])$Sigma_hat
-        loss_l = loss_l + length(folds[[k]])^2 * loss(Y[folds[[k]], , drop = FALSE], D_list_k_list[[k]], Sigma_hat, row_indices_k_list[[k]], col_indices_k_list[[k]], rep(0, length(D_list)))
+        V = subset_V(V_mk_list[[k]], r)
+        fit = mvREHE_DR(Y[-folds[[k]], , drop = FALSE], D_list_mk_list[[k]], V = V, tolerance, max_iter, Sigma_init_list = NULL, Q = Q_mk_list[[k]], row_indices = row_indices_mk_list[[k]], col_indices = col_indices_mk_list[[k]])
+        Sigma_r_hat = fit$Sigma_r_hat
+        loss_l = loss_l + length(folds[[k]])^2 * loss_DR(Y[folds[[k]], , drop = FALSE] %*% fit$V, D_list_k_list[[k]], Sigma_r_hat, row_indices_k_list[[k]], col_indices_k_list[[k]])
       }
       return(loss_l)
     }
 
-    for (l in 1:length(V_seq)) {
+    for (l in 1:length(r_seq)) {
       cat(l)
-      loss[l] = cv_loss(V_seq[[l]])
+      loss[l] = cv_loss(r_seq[[l]])
     }
 
     l = which.min(loss)
-    V = V_seq[[l]]
+    r = r_seq[[l]]
 
     cat("\n")
-    print(V)
+    print(r)
 
-    list(V = V, loss = loss)
+    list(r = r, loss = loss)
 
   })
 
-  V = cv$V
+  r = cv$r
   loss = cv$loss
+
+  V = V_function(Y, r)
 
   result = mvREHE_DR(Y, D_list, V = V, tolerance, max_iter, Sigma_init_list = NULL)
   result$cv_loss = loss
-  result$V_seq = V_seq
-  result$V = V
+  result$r_seq = r_seq
 
   result
+
+}
+
+subset_V = function(V, r) {
+
+  groups = attr(V, "groups")
+  if (is.null(groups)) groups = rep(1, ncol(V))
+
+  indices = c(sapply(0:(length(unique(groups)) - 1), function(x) 1:r + x * ncol(V) / length(unique(groups))))
+
+  V[, indices, drop = FALSE]
 
 }
 
@@ -279,7 +294,7 @@ mvREHE_cvL2 = function(Y, D_list, K = 5, folds = NULL, grid = TRUE, n_lambda = 5
 
 }
 
-precompute_cv = function(Y, D_list, folds, compute_W = TRUE) {
+precompute_cv = function(Y, D_list, folds, compute_W = TRUE, V_function = NULL, r = NULL) {
 
   K = length(folds)
   q = ncol(Y)
@@ -292,6 +307,7 @@ precompute_cv = function(Y, D_list, folds, compute_W = TRUE) {
   col_indices_mk_list = vector(mode = "list", length = K)
   row_indices_k_list = vector(mode = "list", length = K)
   col_indices_k_list = vector(mode = "list", length = K)
+  V_mk_list = vector(mode = "list", length = K)
   for (k in 1:K) {
     D_list_k_list[[k]] = lapply(D_list, function(D) D[folds[[k]], folds[[k]]])
     D_list_mk_list[[k]] = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
@@ -308,6 +324,9 @@ precompute_cv = function(Y, D_list, folds, compute_W = TRUE) {
       W_list_mk_list[[k]] = lapply(1:length(D_list), function(x) matrix(0, q, q))
       compute_W_list(Y[-folds[[k]], , drop = FALSE], D_list_mk_list[[k]], W_list_mk_list[[k]], row_indices_mk_list[[k]], col_indices_mk_list[[k]])
     }
+    if (!is.null(V_function) & !is.null(r)) {
+      V_mk_list[[k]] = V_function(Y[-folds[[k]], , drop = FALSE], r)
+    }
   }
 
   return(list(D_list_mk_list = D_list_mk_list,
@@ -317,7 +336,8 @@ precompute_cv = function(Y, D_list, folds, compute_W = TRUE) {
               row_indices_mk_list = row_indices_mk_list,
               col_indices_mk_list = col_indices_mk_list,
               row_indices_k_list = row_indices_k_list,
-              col_indices_k_list = col_indices_k_list))
+              col_indices_k_list = col_indices_k_list,
+              V_mk_list = V_mk_list))
 
 }
 
@@ -334,5 +354,17 @@ compute_Q = function(D_list) {
   }
 
   return(Q)
+
+}
+
+svd_irlba = function(Y, r) {
+
+  r = min(r, min(nrow(Y), ncol(Y)))
+
+  if (r > 0.5 * min(nrow(Y), ncol(Y))) {
+    return(svd(Y)$v)
+  } else {
+    return(irlba::irlba(Y, nv = r)$v)
+  }
 
 }

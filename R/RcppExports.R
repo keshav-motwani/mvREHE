@@ -5,6 +5,10 @@ loss <- function(Y, D_list, Sigma_list, row_indices, col_indices, lambda) {
     .Call('_mvREHE_loss', PACKAGE = 'mvREHE', Y, D_list, Sigma_list, row_indices, col_indices, lambda)
 }
 
+loss_DR <- function(Yr, D_list, Sigma_r_list, row_indices, col_indices) {
+    .Call('_mvREHE_loss_DR', PACKAGE = 'mvREHE', Yr, D_list, Sigma_r_list, row_indices, col_indices)
+}
+
 compute_W_list <- function(Y, D_list, W_list, row_indices, col_indices) {
     invisible(.Call('_mvREHE_compute_W_list', PACKAGE = 'mvREHE', Y, D_list, W_list, row_indices, col_indices))
 }

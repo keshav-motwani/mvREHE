@@ -27,6 +27,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// loss_DR
+double loss_DR(const arma::mat Yr, const List& D_list, const List& Sigma_r_list, const arma::vec row_indices, const arma::vec col_indices);
+RcppExport SEXP _mvREHE_loss_DR(SEXP YrSEXP, SEXP D_listSEXP, SEXP Sigma_r_listSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat >::type Yr(YrSEXP);
+    Rcpp::traits::input_parameter< const List& >::type D_list(D_listSEXP);
+    Rcpp::traits::input_parameter< const List& >::type Sigma_r_list(Sigma_r_listSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type row_indices(row_indicesSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type col_indices(col_indicesSEXP);
+    rcpp_result_gen = Rcpp::wrap(loss_DR(Yr, D_list, Sigma_r_list, row_indices, col_indices));
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_W_list
 void compute_W_list(const arma::mat& Y, const List& D_list, List& W_list, const arma::vec row_indices, const arma::vec col_indices);
 RcppExport SEXP _mvREHE_compute_W_list(SEXP YSEXP, SEXP D_listSEXP, SEXP W_listSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP) {
@@ -59,6 +74,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 6},
+    {"_mvREHE_loss_DR", (DL_FUNC) &_mvREHE_loss_DR, 5},
     {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 5},
     {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 5},
     {NULL, NULL, 0}

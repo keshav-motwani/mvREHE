@@ -13,7 +13,8 @@ mvREHE_DR(
   Sigma_init_list = NULL,
   Q = NULL,
   row_indices = NULL,
-  col_indices = NULL
+  col_indices = NULL,
+  s = NULL
 )
 }
 \arguments{

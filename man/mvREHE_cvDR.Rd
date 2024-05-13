@@ -7,7 +7,8 @@
 mvREHE_cvDR(
   Y,
   D_list,
-  V_seq,
+  r_seq = NULL,
+  V_function = svd_irlba,
   K = 5,
   folds = NULL,
   tolerance = 0.001,
