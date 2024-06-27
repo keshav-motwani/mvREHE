@@ -208,11 +208,11 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
     for (k in 1:K) {
 
       fit_train = mvREHE::mvREHE_cvDR(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]), r_seq = r_seq, V_function = V_function, K = K, tolerance = tolerance, max_iter = max_iter)
-      Sigma_hat_train = fit_train$V %*% fit_train$Sigma_r_hat[[component]] %*% t(fit_train$V)
+      Sigma_hat_train = cov2cor(fit_train$V %*% fit_train$Sigma_r_hat[[component]] %*% t(fit_train$V))
       beta_hat = solve(Sigma_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% Sigma_hat_train[covariates, outcomes]
 
       fit_test = mvREHE::mvREHE_cvDR(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]), r_seq = r_seq, V_function = V_function, K = K, tolerance = tolerance, max_iter = max_iter)
-      Sigma_hat_test = fit_test$V %*% fit_test$Sigma_r_hat[[component]] %*% t(fit_test$V)
+      Sigma_hat_test = cov2cor(fit_test$V %*% fit_test$Sigma_r_hat[[component]] %*% t(fit_test$V))
 
       cv_loss[l] = cv_loss[l] - 2 * Sigma_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% Sigma_hat_test[covariates, covariates] %*% beta_hat
 
@@ -241,10 +241,12 @@ cv_ridge_regression = function(Y, covariates, outcomes, lambda_seq, K = 5, folds
 
     for (k in 1:K) {
 
-      Sigma_hat_train = cov(Y[-folds[[k]], ])
+      Sigma_hat_train = cor(Y[-folds[[k]], ])
+      Sigma_hat_train[is.na(Sigma_hat_train)] = 0
       beta_hat = solve(Sigma_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% Sigma_hat_train[covariates, outcomes]
 
-      Sigma_hat_test = cov(Y[folds[[k]], ])
+      Sigma_hat_test = cor(Y[folds[[k]], ])
+      Sigma_hat_test[is.na(Sigma_hat_test)] = 0
 
       cv_loss[l] = cv_loss[l] - 2 * Sigma_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% Sigma_hat_test[covariates, covariates] %*% beta_hat
 
@@ -264,158 +266,124 @@ X = cbind(rep(1, nrow(X)), X)
 RESULT_PATH = "data_analysis_results"
 dir.create(RESULT_PATH, recursive = TRUE)
 
-for (pre_average in c(T)) {
+pre_average = TRUE
 
-  if (pre_average) {
+groups = colnames(fun_connectomes[[1]])
+P_community = t(sapply(unique(groups), FUN = function(x) as.numeric(groups == x)/sum(groups == x)))
+fun_connectomes = lapply(fun_connectomes, function(x) {
+  connectome = P_community %*% x %*% t(P_community)
+  rownames(connectome) = colnames(connectome) = unique(groups)
+  connectome
+})
 
-    groups = colnames(fun_connectomes[[1]])
-    P_community = t(sapply(unique(groups), FUN = function(x) as.numeric(groups == x)/sum(groups == x)))
-    fun_connectomes = lapply(fun_connectomes, function(x) {
-      connectome = P_community %*% x %*% t(P_community)
-      rownames(connectome) = colnames(connectome) = unique(groups)
-      connectome
-    })
+groups = colnames(str_connectomes[[1]])
+P_community = t(sapply(unique(groups), FUN = function(x) as.numeric(groups == x)/sum(groups == x)))
+str_connectomes = lapply(str_connectomes, function(x) {
+  connectome = P_community %*% x %*% t(P_community)
+  rownames(connectome) = colnames(connectome) = unique(groups)
+  connectome
+})
 
-    groups = colnames(str_connectomes[[1]])
-    P_community = t(sapply(unique(groups), FUN = function(x) as.numeric(groups == x)/sum(groups == x)))
-    str_connectomes = lapply(str_connectomes, function(x) {
-      connectome = P_community %*% x %*% t(P_community)
-      rownames(connectome) = colnames(connectome) = unique(groups)
-      connectome
-    })
+Y_fun = sapply(fun_connectomes, from_conn_to_vec) %>% t
+Y_str = sapply(str_connectomes, from_conn_to_vec) %>% t
+colnames(Y_fun) = paste0("fun", 1:ncol(Y_fun))
+colnames(Y_str) = paste0("str", 1:ncol(Y_str))
 
-  }
+Y = cbind(Y_fun, Y_str)
+Y_mean = colMeans(Y)
 
-  Y_fun = sapply(fun_connectomes, from_conn_to_vec) %>% t
-  Y_str = sapply(str_connectomes, from_conn_to_vec) %>% t
-  colnames(Y_fun) = paste0("fun", 1:ncol(Y_fun))
-  colnames(Y_str) = paste0("str", 1:ncol(Y_str))
+fun_indices = grep("fun", colnames(Y))
+str_indices = grep("str", colnames(Y))
 
-  annotations = outer(colnames(fun_connectomes[[1]]), colnames(fun_connectomes[[1]]), "paste")
-  fun_DFM_indices = which(annotations[, 1] == annotations[, 2] & annotations[, 2] == "DFM")
+fun_groups = colnames(fun_connectomes[[1]])
+str_groups = colnames(str_connectomes[[1]])
 
-  Y = cbind(Y_fun, Y_str)
+connection_names = outer(fun_groups, fun_groups, "paste")
+connection_names = connection_names[lower.tri(connection_names, diag = TRUE)]
+outcome = grep("SMM AUD", connection_names)[1]
 
-  Ys = list(combined = Y) # , fun = Y_fun, str = Y_str)
+fixed_effects = TRUE
+residuals = lsfit(X, Y, intercept = FALSE)$residuals
+colnames(residuals) = colnames(Y)
+Y = residuals
 
-  for (scale_type in c("column")) { # , "column")) {
+scale_type = "column"
+Y = scale(Y)
+Y[, attr(Y, "scaled:scale") == 0] = 0
+# Y[, fun_indices] = Y[, fun_indices] / norm(Y[, fun_indices], "F")
+# Y[, str_indices] = Y[, str_indices] / norm(Y[, str_indices], "F")
 
-    for (fixed_effects in c(T)) { # , F)) {
+D_list = list(diag(nrow = nrow(Y), ncol = nrow(Y)), as.matrix(K_G), as.matrix(K_G > 0) * 1)
+genetic_component = 2
+common_env_component = 3
+unique_env_component = 1
 
-      for (type in names(Ys)) {
+V_function = separate_svd_irlba
 
-        Y = Ys[[type]]
-        Y_mean = colMeans(Y)
+fit = mvREHE::mvHE(Y, D_list)
 
-        fun_indices = grep("fun", colnames(Y))
-        str_indices = grep("str", colnames(Y))
+# Variance component model estimation (replace code)
+start.time = Sys.time()
+fit = mvREHE::mvREHE_cvDR(Y, D_list = D_list, r_seq = intersect(1:min(ncol(Y), nrow(Y)), 1:9 * 10), V_function = V_function)
+Sigma_hat = lapply(fit$Sigma_r_hat, function(Sigma) fit$V %*% Sigma %*% t(fit$V))
+end.time = Sys.time()
+time.taken = end.time - start.time
+print(time.taken)
 
-        fun_groups = colnames(fun_connectomes[[1]])
-        str_groups = colnames(str_connectomes[[1]])
+# Heritability estimate
+print(sapply(Sigma_hat, function(x) sum(diag(x)))/sum(sapply(Sigma_hat, function(x) sum(diag(x)))))
 
-        if (fixed_effects) {
-          cols = 1:ncol(X)
-        } else {
-          cols = 1
-        }
+# Extract loadings of a PCA on the genetic correlation structure
+vv_gen = eigen(cov2cor(Sigma_hat[[genetic_component]]), symmetric = TRUE)$vectors
+vv_gen = vv_gen %*% diag(sign(colMeans(vv_gen)))
 
-        residuals = lsfit(X[, cols, drop = FALSE], Y, intercept = FALSE)$residuals
-        colnames(residuals) = colnames(Y)
+# Extract loadings of a PCA on the raw covariance structure
+cor_Y = cor(Y)
+cor_Y[is.na(cor_Y)] = 0
+vv_raw = eigen(cor_Y, symmetric = TRUE)$vectors
+vv_raw = vv_raw %*% diag(sign(colMeans(vv_raw)))
 
-        Y = residuals
+community = TRUE
 
-        if (type == "combined") {
-          Y[, grep("fun", colnames(Y))] = Y[, grep("fun", colnames(Y))] / norm(Y[, grep("fun", colnames(Y))], "F")
-          Y[, grep("str", colnames(Y))] = Y[, grep("str", colnames(Y))] / norm(Y[, grep("str", colnames(Y))], "F")
-        } else {
-          Y = Y / norm(Y, "F")
-        }
+figure = list()
+# figure[[1]] = plot_connectome_vec(Y_mean[fun_indices], "Functional Mean", groups = fun_groups, community = community)
+# figure[[2]] = plot_connectome_vec(Y_mean[str_indices], "Structural Mean", groups = str_groups, community = community)
+figure[[4]] = plot_connectome_vec(vv_gen[fun_indices, 1], "Genetic Component PC 1 - Functional", groups = fun_groups, community = community)
+figure[[3]] = plot_connectome_vec(vv_gen[str_indices, 1], "Genetic Component PC 1 - Structural", groups = str_groups, community = community)
+# figure[[7]] = plot_connectome_vec(vv_common[fun_indices, pc], paste0("Functional Common Environ PC ", pc), groups = fun_groups, community = community)
+# figure[[8]] = plot_connectome_vec(vv_common[str_indices, pc], paste0("Structural Common Environ PC ", pc), groups = str_groups, community = community)
+figure[[2]] = plot_connectome_vec(vv_raw[fun_indices, 1], "Observed Data PC 1 - Functional", groups = fun_groups, community = community)
+figure[[1]] = plot_connectome_vec(vv_raw[str_indices, 1], "Observed Data PC 1 - Structural", groups = str_groups, community = community)
+figure[[8]] = plot_connectome_vec(vv_gen[fun_indices, 2], "Genetic Component PC 2 - Functional", groups = fun_groups, community = community)
+figure[[7]] = plot_connectome_vec(vv_gen[str_indices, 2], "Genetic Component PC 2 - Structural", groups = str_groups, community = community)
+figure[[6]] = plot_connectome_vec(vv_raw[fun_indices, 2], "Observed Data PC 2 - Functional", groups = fun_groups, community = community)
+figure[[5]] = plot_connectome_vec(vv_raw[str_indices, 2], "Observed Data PC 2 - Structural", groups = str_groups, community = community)
+figure = figure[!sapply(figure, function(x) is.na(x)[1])]
 
-        if (scale_type == "column") {
+pdf(file.path(RESULT_PATH, "pc_loadings.pdf"), height = 5.3, width = 10)
+print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
+dev.off()
 
-          Y = scale(Y)
-          Y[, attr(Y, "scaled:scale") == 0] = 0
-
-        }
-
-        D_list = list(diag(nrow = nrow(Y), ncol = nrow(Y)), as.matrix(K_G), as.matrix(K_G > 0) * 1)
-
-        if (type == "combined") {
-          V_function = separate_svd_irlba
-        } else {
-          V_function = mvREHE:::svd_irlba
-        }
-
-        # Variance component model estimation (replace code)
-        start.time = Sys.time()
-        fit = mvREHE::mvREHE_cvDR(Y, D_list = D_list, r_seq = intersect(1:min(ncol(Y), nrow(Y)), 1:9 * 10), V_function = V_function)
-        end.time = Sys.time()
-        time.taken = end.time - start.time
-        print(time.taken)
-
-        # Heritability estimate
-        print(sapply(fit$Sigma_r_hat, function(x) sum(diag(x)))/sum(sapply(fit$Sigma_r_hat, function(x) sum(diag(x)))))
-
-        # Extract loadings of a PCA on the genetic covariance structure
-        vv_gen = fit$V %*% eigen(fit$Sigma_r_hat[[2]], symmetric = TRUE)$vectors
-        vv_gen = vv_gen %*% diag(sign(colMeans(vv_gen)))
-
-        # Extract loadings of a PCA on the raw covariance structure
-        vv_raw = irlba::irlba(Y)$v
-        vv_raw = vv_raw %*% diag(sign(colMeans(vv_raw)))
-
-        if (!pre_average) {
-          cs = c(T, F)
-        } else {
-          cs = c(T)
-        }
-
-        for (community in cs) {
-
-          figure = list()
-          # figure[[1]] = plot_connectome_vec(Y_mean[fun_indices], "Functional Mean", groups = fun_groups, community = community)
-          # figure[[2]] = plot_connectome_vec(Y_mean[str_indices], "Structural Mean", groups = str_groups, community = community)
-          figure[[4]] = plot_connectome_vec(vv_gen[fun_indices, 1], "Genetic PC 1 - Functional", groups = fun_groups, community = community)
-          figure[[3]] = plot_connectome_vec(vv_gen[str_indices, 1], "Genetic PC 1 - Structural", groups = str_groups, community = community)
-          # figure[[7]] = plot_connectome_vec(vv_common[fun_indices, pc], paste0("Functional Common Environ PC ", pc), groups = fun_groups, community = community)
-          # figure[[8]] = plot_connectome_vec(vv_common[str_indices, pc], paste0("Structural Common Environ PC ", pc), groups = str_groups, community = community)
-          figure[[2]] = plot_connectome_vec(vv_raw[fun_indices, 1], "Raw PC 1 - Functional", groups = fun_groups, community = community)
-          figure[[1]] = plot_connectome_vec(vv_raw[str_indices, 1], "Raw PC 1 - Structural", groups = str_groups, community = community)
-
-          figure[[8]] = plot_connectome_vec(vv_gen[fun_indices, 2], "Genetic PC 2 - Functional", groups = fun_groups, community = community)
-          figure[[7]] = plot_connectome_vec(vv_gen[str_indices, 2], "Genetic PC 2 - Structural", groups = str_groups, community = community)
-          figure[[6]] = plot_connectome_vec(vv_raw[fun_indices, 2], "Raw PC 2 - Functional", groups = fun_groups, community = community)
-          figure[[5]] = plot_connectome_vec(vv_raw[str_indices, 2], "Raw PC 2 - Structural", groups = str_groups, community = community)
-
-          figure[[6]] = plot_connectome_vec(beta, "Regression Coefficients", groups = str_groups, community = community)
-
-          figure = figure[!sapply(figure, function(x) is.na(x)[1])]
-
-          pdf(file.path(RESULT_PATH, paste0(type, "_pre_average", pre_average, "_fixed_effects", fixed_effects, "_scale_", scale_type, "_community", community, "_loadings.pdf")), height = 5.3, width = 10)
-          print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
-          dev.off()
-
-        }
-
-        lambda = cv_ridge_regression(Y, covariates = str_indices, outcomes = 9, lambda_seq = seq(0.1, 1, by = 0.025), K = 2)
-
-        Sigma_G_hat = fit$V %*% fit$Sigma_r_hat[[2]] %*% t(fit$V)
-
-        genetic_beta = solve(Sigma_G_hat[str_indices, str_indices] + diag(lambda, length(str_indices), length(str_indices))) %*% Sigma_G_hat[str_indices, 9]
-
-        print(cowplot::plot_grid(list((plot_connectome_vec(beta, "Regression coefficients", groups = str_groups, community = TRUE)))))
-
-        cov_hat = cov(Y)
-
-        lambda = cv_ridge_regression(Y, covariates = str_indices, outcomes = 9, lambda_seq = seq(1, 10, by = 0.5), K = 2)
-
-        beta = solve(cov_hat[str_indices, str_indices] + diag(lambda, length(str_indices), length(str_indices))) %*% cov_hat[str_indices, 9]
-
-
-      }
-
-    }
-
-  }
-
+beta_components = list()
+for (component in 1:3) {
+  lambda = cv_component_ridge_regression(Y, D_list = D_list, component = component, covariates = str_indices, outcomes = outcome, lambda_seq = seq(0.001, 0.3, length.out = 10), r_seq = intersect(1:min(ncol(Y), nrow(Y)), 1:4 * 10), V_function = V_function, K = 2)
+  beta_components[[component]] = solve(Sigma_hat[[component]][str_indices, str_indices] + diag(lambda, length(str_indices), length(str_indices))) %*% Sigma_hat[[component]][str_indices, outcome]
 }
+
+Sigma_raw_hat = cor(Y)
+Sigma_raw_hat[is.na(Sigma_raw_hat)] = 0
+lambda_raw = cv_ridge_regression(Y, covariates = str_indices, outcomes = outcome, lambda_seq = seq(1, 10, by = 0.5), K = 2)
+beta_raw = solve(Sigma_raw_hat[str_indices, str_indices] + diag(lambda_raw, length(str_indices), length(str_indices))) %*% Sigma_raw_hat[str_indices, 9]
+
+figure = list()
+figure[[1]] = plot_connectome_vec(beta_raw, "Coefficients from Observed Data", groups = str_groups, community = community)
+figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]], "Coefficients from Genetic Component", groups = str_groups, community = community)
+figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]], "Coefficients from Common Env Component", groups = str_groups, community = community)
+figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coefficients from Unique Env Component", groups = str_groups, community = community)
+
+pdf(file.path(RESULT_PATH, "regression_coefficients.pdf"), height = 2.6, width = 10)
+print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
+dev.off()
+
+
+
