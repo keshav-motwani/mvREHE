@@ -11,6 +11,7 @@ mvREHE_cvDR(
   V_function = svd_irlba,
   K = 5,
   folds = NULL,
+  compute_full_Sigma = FALSE,
   tolerance = 0.001,
   max_iter = 100
 )

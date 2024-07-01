@@ -7,7 +7,7 @@
 #' @export
 #'
 #' @examples
-mvHE = function(Y, D_list) {
+mvHE = function(Y, D_list, truncate = TRUE) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -44,7 +44,7 @@ mvHE = function(Y, D_list) {
 
     Sigma_k_hat = Sigma_hat[[k]]
     eigen_Sigma_k_hat = eigen(Sigma_k_hat)
-    if (any(eigen_Sigma_k_hat$values < 0)) {
+    if (any(eigen_Sigma_k_hat$values < 0) & truncate) {
       Sigma_hat[[k]] = eigen_Sigma_k_hat$vectors %*% diag(pmax(eigen_Sigma_k_hat$values, 0), ncol(eigen_Sigma_k_hat$vectors), ncol(eigen_Sigma_k_hat$vectors)) %*% t(eigen_Sigma_k_hat$vectors)
       attr(Sigma_hat[[k]], "truncated") = TRUE
     } else {

@@ -141,7 +141,7 @@ mvREHE_DR = function(Y, D_list, V = NULL, tolerance = NULL, max_iter = 100, Sigm
 #' @export
 #'
 #' @examples
-mvREHE_cvDR = function(Y, D_list, r_seq = NULL, V_function = svd_irlba, K = 5, folds = NULL, tolerance = 1e-3, max_iter = 100) {
+mvREHE_cvDR = function(Y, D_list, r_seq = NULL, V_function = svd_irlba, K = 5, folds = NULL, compute_full_Sigma = FALSE, tolerance = 1e-3, max_iter = 100) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -194,6 +194,10 @@ mvREHE_cvDR = function(Y, D_list, r_seq = NULL, V_function = svd_irlba, K = 5, f
   result = mvREHE_DR(Y, D_list, V = V, tolerance, max_iter, Sigma_init_list = NULL)
   result$cv_loss = loss
   result$r_seq = r_seq
+
+  if (compute_full_Sigma) {
+    result$Sigma_hat = lapply(result$Sigma_hat, function(Sigma) result$V %*% Sigma %*% result$V)
+  }
 
   result
 
