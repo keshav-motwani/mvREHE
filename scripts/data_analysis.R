@@ -190,7 +190,7 @@ separate_svd_irlba = function(Y, r) {
 
 }
 
-cv_component_ridge_regression = function(Y, D_list, component, covariates, outcomes, lambda_seq, r_seq, V_function = svd_irlba, K = 5, folds = NULL, tolerance = 1e-3, max_iter = 100) {
+cv_component_ridge_regression = function(Y, D_list, component, covariates, outcomes, lambda_seq, K = 5, folds = NULL, tolerance = 1e-3, max_iter = 100) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -207,20 +207,27 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
 
     for (k in 1:K) {
 
-      fit_train = mvREHE::mvREHE_cvDR(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]), r_seq = r_seq, V_function = V_function, K = K, tolerance = tolerance, max_iter = max_iter)
-      Sigma_hat_train = cov2cor(fit_train$V %*% fit_train$Sigma_r_hat[[component]] %*% t(fit_train$V))
-      beta_hat = solve(Sigma_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% Sigma_hat_train[covariates, outcomes]
+      # fit_train = mvREHE::mvREHE_cvDR(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]), r_seq = 1:4 * 10, V_function = separate_svd_irlba, tolerance = tolerance, max_iter = max_iter)
+      # fit_train$Sigma_hat = lapply(fit_train$Sigma_r_hat, function(Sigma) fit_train$V %*% Sigma %*% t(fit_train$V))
+      fit_train = mvREHE::mvREHE(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]), tolerance = tolerance, max_iter = max_iter)
+      cor_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
+      beta_hat = solve(cor_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% cor_hat_train[covariates, outcomes]
 
-      fit_test = mvREHE::mvREHE_cvDR(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]), r_seq = r_seq, V_function = V_function, K = K, tolerance = tolerance, max_iter = max_iter)
-      Sigma_hat_test = cov2cor(fit_test$V %*% fit_test$Sigma_r_hat[[component]] %*% t(fit_test$V))
+      # fit_test = mvREHE::mvREHE_cvDR(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]),  r_seq = 1:4 * 10, V_function = separate_svd_irlba, tolerance = tolerance, max_iter = max_iter)
+      # fit_test$Sigma_hat = lapply(fit_test$Sigma_r_hat, function(Sigma) fit_test$V %*% Sigma %*% t(fit_test$V))
+      fit_test = mvREHE::mvREHE(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]), tolerance = tolerance, max_iter = max_iter)
+      cor_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
 
-      cv_loss[l] = cv_loss[l] - 2 * Sigma_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% Sigma_hat_test[covariates, covariates] %*% beta_hat
+      cv_loss[l] = cv_loss[l] - 2 * cor_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% cor_hat_test[covariates, covariates] %*% beta_hat
 
     }
 
   }
 
-  return(lambda_seq[which.min(cv_loss)])
+  lambda = lambda_seq[which.min(cv_loss)]
+  attr(lambda, "cv_loss") = cv_loss
+
+  return(lambda)
 
 }
 
@@ -241,20 +248,23 @@ cv_ridge_regression = function(Y, covariates, outcomes, lambda_seq, K = 5, folds
 
     for (k in 1:K) {
 
-      Sigma_hat_train = cor(Y[-folds[[k]], ])
-      Sigma_hat_train[is.na(Sigma_hat_train)] = 0
-      beta_hat = solve(Sigma_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% Sigma_hat_train[covariates, outcomes]
+      cor_hat_train = cor(Y[-folds[[k]], ])
+      cor_hat_train[is.na(cor_hat_train)] = 0
+      beta_hat = solve(cor_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% cor_hat_train[covariates, outcomes]
 
-      Sigma_hat_test = cor(Y[folds[[k]], ])
-      Sigma_hat_test[is.na(Sigma_hat_test)] = 0
+      cor_hat_test = cor(Y[folds[[k]], ])
+      cor_hat_test[is.na(cor_hat_test)] = 0
 
-      cv_loss[l] = cv_loss[l] - 2 * Sigma_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% Sigma_hat_test[covariates, covariates] %*% beta_hat
+      cv_loss[l] = cv_loss[l] - 2 * cor_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% cor_hat_test[covariates, covariates] %*% beta_hat
 
     }
 
   }
 
-  return(lambda_seq[which.min(cv_loss)])
+  lambda = lambda_seq[which.min(cv_loss)]
+  attr(lambda, "cv_loss") = cv_loss
+
+  return(lambda)
 
 }
 
@@ -318,23 +328,25 @@ genetic_component = 2
 common_env_component = 3
 unique_env_component = 1
 
-V_function = separate_svd_irlba
-
-fit = mvREHE::mvHE(Y, D_list)
-
 # Variance component model estimation (replace code)
 start.time = Sys.time()
-fit = mvREHE::mvREHE_cvDR(Y, D_list = D_list, r_seq = intersect(1:min(ncol(Y), nrow(Y)), 1:9 * 10), V_function = V_function)
-Sigma_hat = lapply(fit$Sigma_r_hat, function(Sigma) fit$V %*% Sigma %*% t(fit$V))
+# fit = mvREHE::mvREHE_cvDR(Y, D_list = D_list, r_seq = 1:9 * 10, V_function = separate_svd_irlba)
+# fit$Sigma_hat = lapply(fit$Sigma_r_hat, function(Sigma) fit$V %*% Sigma %*% t(fit$V))
+fit = mvREHE::mvREHE(Y, D_list = D_list)
+Sigma_hat = lapply(fit$Sigma_hat, function(Sigma) diag(attr(Y, "scaled:scale")) %*% Sigma %*% diag(attr(Y, "scaled:scale")))
 end.time = Sys.time()
 time.taken = end.time - start.time
 print(time.taken)
+
+saveRDS(fit, file.path(RESULT_PATH, "fit.rds"))
 
 # Heritability estimate
 print(sapply(Sigma_hat, function(x) sum(diag(x)))/sum(sapply(Sigma_hat, function(x) sum(diag(x)))))
 
 # Extract loadings of a PCA on the genetic correlation structure
-vv_gen = eigen(cov2cor(Sigma_hat[[genetic_component]]), symmetric = TRUE)$vectors
+cor_gen = cov2cor(Sigma_hat[[genetic_component]])
+cor_gen[is.na(cor_gen)] = 0
+vv_gen = eigen(cor_gen, symmetric = TRUE)$vectors
 vv_gen = vv_gen %*% diag(sign(colMeans(vv_gen)))
 
 # Extract loadings of a PCA on the raw covariance structure
@@ -360,30 +372,30 @@ figure[[6]] = plot_connectome_vec(vv_raw[fun_indices, 2], "Observed Data PC 2 - 
 figure[[5]] = plot_connectome_vec(vv_raw[str_indices, 2], "Observed Data PC 2 - Structural", groups = str_groups, community = community)
 figure = figure[!sapply(figure, function(x) is.na(x)[1])]
 
-pdf(file.path(RESULT_PATH, "pc_loadings.pdf"), height = 5.3, width = 10)
+pdf(file.path(RESULT_PATH, "pc_loadings_new.pdf"), height = 5.3, width = 10)
 print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
 dev.off()
 
 beta_components = list()
 for (component in 1:3) {
-  lambda = cv_component_ridge_regression(Y, D_list = D_list, component = component, covariates = str_indices, outcomes = outcome, lambda_seq = seq(0.001, 0.3, length.out = 10), r_seq = intersect(1:min(ncol(Y), nrow(Y)), 1:4 * 10), V_function = V_function, K = 2)
-  beta_components[[component]] = solve(Sigma_hat[[component]][str_indices, str_indices] + diag(lambda, length(str_indices), length(str_indices))) %*% Sigma_hat[[component]][str_indices, outcome]
+  cor_component_hat = cov2cor(Sigma_hat[[component]])
+  cor_component_hat[is.na(cor_component_hat)] = 0
+  max_eigenvalue = max(eigen(cor_component_hat)$val)
+  lambda = cv_component_ridge_regression(Y, D_list = D_list, component = component, covariates = str_indices, outcomes = outcome, lambda_seq = seq(max_eigenvalue / 200, max_eigenvalue / 5, length.out = 10), K = 2)
+  beta_components[[component]] = solve(cor_component_hat[str_indices, str_indices] + diag(lambda, length(str_indices), length(str_indices))) %*% cor_component_hat[str_indices, outcome]
 }
 
-Sigma_raw_hat = cor(Y)
-Sigma_raw_hat[is.na(Sigma_raw_hat)] = 0
+cor_raw_hat = cor(Y)
+cor_raw_hat[is.na(cor_raw_hat)] = 0
 lambda_raw = cv_ridge_regression(Y, covariates = str_indices, outcomes = outcome, lambda_seq = seq(1, 10, by = 0.5), K = 2)
-beta_raw = solve(Sigma_raw_hat[str_indices, str_indices] + diag(lambda_raw, length(str_indices), length(str_indices))) %*% Sigma_raw_hat[str_indices, 9]
+beta_raw = solve(cor_raw_hat[str_indices, str_indices] + diag(lambda_raw, length(str_indices), length(str_indices))) %*% cor_raw_hat[str_indices, 9]
 
 figure = list()
-figure[[1]] = plot_connectome_vec(beta_raw, "Coefficients from Observed Data", groups = str_groups, community = community)
-figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]], "Coefficients from Genetic Component", groups = str_groups, community = community)
-figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]], "Coefficients from Common Env Component", groups = str_groups, community = community)
-figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coefficients from Unique Env Component", groups = str_groups, community = community)
+figure[[1]] = plot_connectome_vec(beta_raw, "Coefficients from Observed Data", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
+figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]], "Coefficients from Genetic Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
+figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]], "Coefficients from Common Env Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
+figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coefficients from Unique Env Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
 
-pdf(file.path(RESULT_PATH, "regression_coefficients.pdf"), height = 2.6, width = 10)
+pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.6, width = 10)
 print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
 dev.off()
-
-
-
