@@ -225,6 +225,7 @@ max_principal_angle = function(cov_estimate, cov_truth, r) {
 beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates, outcomes, estimator) {
 
   cor_estimate = cov2cor(cov_estimate)
+  cor_estimate[is.na(cor_estimate)] = 0
   max_eigenvalue = max(eigen(cor_estimate)$values)
   lambda_seq = seq(max_eigenvalue / 200, max_eigenvalue / 5, length.out = 10)
 
@@ -259,12 +260,14 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
       # fit_train$Sigma_hat = lapply(fit_train$Sigma_r_hat, function(Sigma) fit_train$V %*% Sigma %*% t(fit_train$V))
       fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]))
       cor_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
+      cor_hat_train[is.na(cor_hat_train)] = 0
       beta_hat = solve(cor_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% cor_hat_train[covariates, outcomes]
 
       # fit_test = mvREHE::mvREHE_cvDR(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]),  r_seq = 1:4 * 10, V_function = separate_svd_irlba, tolerance = tolerance, max_iter = max_iter)
       # fit_test$Sigma_hat = lapply(fit_test$Sigma_r_hat, function(Sigma) fit_test$V %*% Sigma %*% t(fit_test$V))
       fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]))
       cor_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
+      cor_hat_test[is.na(cor_hat_test)] = 0
       cv_loss[l] = cv_loss[l] - 2 * cor_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% cor_hat_test[covariates, covariates] %*% beta_hat
 
     }
