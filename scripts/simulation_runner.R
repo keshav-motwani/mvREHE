@@ -38,23 +38,17 @@ diag_squared_error = function(estimate, truth) {
   }
 }
 
-generate_uniform_Sigma = function(q) {
-  if (q <= 100) {
-    matrix = clusterGeneration::rcorrmatrix(q)
-    sqrt_matrix = sqrt_matrix(matrix)
-  } else {
-    blocks = lapply(1:(q / 100), function(x) clusterGeneration::rcorrmatrix(100))
-    sqrt_blocks = lapply(blocks, sqrt_matrix)
-    matrix = as.matrix(Matrix::bdiag(blocks))
-    sqrt_matrix = as.matrix(Matrix::bdiag(sqrt_blocks))
-  }
-  attr(matrix, "sqrt") = sqrt_matrix
+generate_lowdim_Sigma = function(q) {
+  V = pracma::randortho(q)
+  val = 1/(1:q)
+  matrix = V %*% diag(val) %*% t(V)
+  attr(matrix, "sqrt") = V %*% diag(sqrt(val)) %*% t(V)
   matrix
 }
 
 generate_fast_Sigma = function(q) {
   V = pracma::randortho(q)
-  val = 1/(1:q)^1.25 + 1/(cond_num - 1)
+  val = 1/(1:q)^2 + 1/(cond_num - 1)
   matrix = V %*% diag(val) %*% t(V)
   attr(matrix, "sqrt") = V %*% diag(sqrt(val)) %*% t(V)
   matrix
@@ -62,7 +56,7 @@ generate_fast_Sigma = function(q) {
 
 generate_moderate_Sigma = function(q) {
   V = pracma::randortho(q)
-  val = 1/(1:q)^1 + 1/(cond_num - 1)
+  val = 1/(1:q)^1.5 + 1/(cond_num - 1)
   matrix = V %*% diag(val) %*% t(V)
   attr(matrix, "sqrt") = V %*% diag(sqrt(val)) %*% t(V)
   matrix
@@ -70,7 +64,7 @@ generate_moderate_Sigma = function(q) {
 
 generate_slow_Sigma = function(q) {
   V = pracma::randortho(q)
-  val = 1/(1:q)^0.75 + 1/(cond_num - 1)
+  val = 1/(1:q)^1 + 1/(cond_num - 1)
   matrix = V %*% diag(val) %*% t(V)
   attr(matrix, "sqrt") = V %*% diag(sqrt(val)) %*% t(V)
   matrix
@@ -227,7 +221,7 @@ beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates,
   cor_estimate = cov2cor(cov_estimate)
   cor_estimate[is.na(cor_estimate)] = 0
   max_eigenvalue = max(eigen(cor_estimate)$values)
-  lambda_seq = seq(max_eigenvalue / 200, max_eigenvalue / 5, length.out = 10)
+  lambda_seq = seq(max_eigenvalue / 500, max_eigenvalue / 5, length.out = 10)
 
   lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
   beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
@@ -281,8 +275,11 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
 
 }
 
-source("scripts/mvREML.R")
 mvREML_DR5 = function(Y, D_list) {
+
+  source("scripts/mvREML.R")
+
+  R = 5
 
   PC_Y = prcomp(Y, center = FALSE, scale. = FALSE)
   R = as.numeric(gsub("DR", "", strsplit(method, "-")[[1]][1]))
@@ -329,11 +326,11 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     for (k in 1:length(Sigma_hat)) {
       eig = eigen(Sigma_hat[[k]])
       if (Sigma == "fast") {
-        eig$val = 1/(1:q)^2 + 1/(cond_num - 1)
+        eig$val = heritability_prop[k] * (1/(1:q)^2 + 1/(cond_num - 1))
       } else if (Sigma == "moderate") {
-        eig$val = 1/(1:q)^1.75 + 1/(cond_num - 1)
+        eig$val = heritability_prop[k] * (1/(1:q)^1.5 + 1/(cond_num - 1))
       } else if (Sigma == "slow") {
-        eig$val = 1/(1:q)^1.5 + 1/(cond_num - 1)
+        eig$val = heritability_prop[k] * (1/(1:q)^1 + 1/(cond_num - 1))
       } else if (Sigma == "data") {
         eig$val = eig$val + eig$val[1] / (cond_num - 1)
       }
@@ -466,7 +463,7 @@ replicates = 1:50
 
 if (SIMULATION_ID == 1) { # 4800
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
-  Sigmas = "uniform"
+  Sigmas = "lowdim"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
   qs = c(10, 20)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
