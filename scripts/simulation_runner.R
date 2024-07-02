@@ -275,9 +275,9 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
 
 }
 
-mvREML_DR5 = function(Y, D_list) {
+source("scripts/mvREML.R")
 
-  source("scripts/mvREML.R")
+mvREML_DR5 = function(Y, D_list) {
 
   R = 5
 
