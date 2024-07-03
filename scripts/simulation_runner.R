@@ -227,11 +227,10 @@ beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates,
   cor_estimate = cov2cor(cov_estimate)
   cor_estimate[is.na(cor_estimate)] = 0
   max_eigenvalue = max(eigen(cor_estimate)$values)
-  lambda_seq = seq(max_eigenvalue / 1000, max_eigenvalue, length.out = 100)
+  lambda_seq = seq(max_eigenvalue / 1000, max_eigenvalue, length.out = 10)
 
-  # lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
-  # beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
-  beta_estimate = pseudoinverse(cor_estimate[covariates, covariates]) %*% cor_estimate[covariates, outcomes]
+  lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
+  beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
 
   cor_truth = cov2cor(cov_truth)
   beta_truth = solve(cor_truth[covariates, covariates]) %*% cor_truth[covariates, outcomes]
@@ -405,6 +404,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
       univariate(Y, D_list, mvREHE)
     }
   } else if (method == "REML") {
+    source("scripts/mvREML.R")
     estimator = function(Y, D_list) {
       univariate(Y, D_list, mvREML)
     }
@@ -437,7 +437,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
   true = list(Sigma_0, Sigma_1, Sigma_2)
 
-  if (id != 3 & grepl("mv", method)) {
+  if (id != 3 & !grepl("REML", method) & grepl("mv", method)) {
     beta_error = sapply(1:length(estimate$Sigma_hat), function(k) {
       beta_error(estimate$Sigma_hat[[k]], true[[k]], Y, D_list, k, covariates, outcome, estimator)
     })
@@ -469,7 +469,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
 SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
-RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
+RESULT_PATH = paste0("simulation_results_", SIMULATION_ID)
 DATA_ANALYSIS_RESULT_PATH = "data_analysis_results"
 dir.create(RESULT_PATH, recursive = TRUE)
 
