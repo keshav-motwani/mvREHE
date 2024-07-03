@@ -221,7 +221,7 @@ beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates,
   cor_estimate = cov2cor(cov_estimate)
   cor_estimate[is.na(cor_estimate)] = 0
   max_eigenvalue = max(eigen(cor_estimate)$values)
-  lambda_seq = seq(max_eigenvalue / 500, max_eigenvalue / 5, length.out = 10)
+  lambda_seq = seq(max_eigenvalue / 1000, max_eigenvalue, length.out = 100)
 
   lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
   beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
