@@ -216,6 +216,12 @@ max_principal_angle = function(cov_estimate, cov_truth, r) {
 
 }
 
+pseudoinverse = function(mat) {
+  eig = eigen(mat)
+  r = sum(eig$val > 1e-12)
+  eig$vec[, 1:r] %*% diag(1/eig$val[1:r]) %*% t(eig$vec[, 1:r])
+}
+
 beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates, outcomes, estimator) {
 
   cor_estimate = cov2cor(cov_estimate)
@@ -223,8 +229,9 @@ beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates,
   max_eigenvalue = max(eigen(cor_estimate)$values)
   lambda_seq = seq(max_eigenvalue / 1000, max_eigenvalue, length.out = 100)
 
-  lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
-  beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
+  # lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
+  # beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
+  beta_estimate = pseudoinverse(cor_estimate[covariates, covariates]) %*% cor_estimate[covariates, outcomes]
 
   cor_truth = cov2cor(cov_truth)
   beta_truth = solve(cor_truth[covariates, covariates]) %*% cor_truth[covariates, outcomes]
@@ -274,8 +281,6 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
   return(lambda)
 
 }
-
-source("scripts/mvREML.R")
 
 mvREML_DR5 = function(Y, D_list) {
 
@@ -385,9 +390,11 @@ simulation = function(n, q, Sigma, method, id, replicate) {
       fit
     }
   } else if (method == "mvREML") {
+    source("scripts/mvREML.R")
     estimator = mvREML
   }
     else if (method == "mvREML_DR5") {
+    source("scripts/mvREML.R")
     estimator = mvREML_DR5
   } else if (method == "HE") {
     estimator = function(Y, D_list) {
