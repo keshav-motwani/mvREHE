@@ -273,7 +273,7 @@ rownames(X) = X$subject
 X = X[common_subjects, c("Age", "Age.2", "Sex", "FS_IntraCranial_Vol..1.3.", "FS_BrainSeg_Vol..1.3.")]
 X = cbind(rep(1, nrow(X)), X)
 
-RESULT_PATH = "data_analysis_results"
+RESULT_PATH = "data_analysis_2_components"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 pre_average = TRUE
@@ -323,9 +323,8 @@ Y[, attr(Y, "scaled:scale") == 0] = 0
 # Y[, fun_indices] = Y[, fun_indices] / norm(Y[, fun_indices], "F")
 # Y[, str_indices] = Y[, str_indices] / norm(Y[, str_indices], "F")
 
-D_list = list(diag(nrow = nrow(Y), ncol = nrow(Y)), as.matrix(K_G), as.matrix(K_G > 0) * 1)
+D_list = list(diag(nrow = nrow(Y), ncol = nrow(Y)), as.matrix(K_G))
 genetic_component = 2
-common_env_component = 3
 unique_env_component = 1
 
 # Variance component model estimation (replace code)
@@ -377,7 +376,7 @@ print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
 dev.off()
 
 beta_components = list()
-for (component in 1:3) {
+for (component in 1:length(D_list)) {
   cor_component_hat = cov2cor(Sigma_hat[[component]])
   cor_component_hat[is.na(cor_component_hat)] = 0
   max_eigenvalue = max(eigen(cor_component_hat)$val)
@@ -393,9 +392,8 @@ beta_raw = solve(cor_raw_hat[str_indices, str_indices] + diag(lambda_raw, length
 figure = list()
 figure[[1]] = plot_connectome_vec(beta_raw, "Coefficients from Observed Data", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
 figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]], "Coefficients from Genetic Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
-figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]], "Coefficients from Common Env Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
-figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coefficients from Unique Env Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
+figure[[3]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coefficients from Unique Env Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
 
-pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.6, width = 10)
-print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
+pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.6, width = 7.5)
+print(cowplot::plot_grid(plotlist = figure, ncol = 3, byrow = TRUE))
 dev.off()
