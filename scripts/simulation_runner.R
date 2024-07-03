@@ -476,23 +476,23 @@ if (SIMULATION_ID == 1) { # 4800
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
   qs = 5
   grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n"))
-} else if (SIMULATION_ID == 2) { # 3600
+} else if (SIMULATION_ID == 2) { # 3000
   methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
   Sigmas = c("fast", "moderate", "slow")
-  ns = c(500, 1000, 2000, 4000, 8000, 16000)
+  ns = c(500, 1000, 2000, 4000, 8000)
   qs = 1000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
-} else if (SIMULATION_ID == 3) { # 2400
+} else if (SIMULATION_ID == 3) { # 2000
   methods = c("mvHE", "mvREHE", "mvHE-smoothed", "mvREHE-smoothed")
   Sigmas = c("smooth_1", "smooth_2")
   qs = 100
-  ns = c(500, 1000, 2000, 4000, 8000, 16000)
+  ns = c(500, 1000, 2000, 4000, 8000)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
-} else if (SIMULATION_ID == 4) { # 4800
+} else if (SIMULATION_ID == 4) { # 4000
   methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
   Sigmas = c("data", "fast", "moderate", "slow")
   qs = NA
-  ns = c(500, 1000, 2000, 4000, 8000, 16000)
+  ns = c(500, 1000, 2000, 4000, 8000)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 }
 
