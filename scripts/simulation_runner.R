@@ -437,7 +437,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
   true = list(Sigma_0, Sigma_1, Sigma_2)
 
-  if (id != 3 & !grepl("REML", method) & grepl("mv", method)) {
+  if (id != 3 & grepl("mv", method)) {
     beta_error = sapply(1:length(estimate$Sigma_hat), function(k) {
       beta_error(estimate$Sigma_hat[[k]], true[[k]], Y, D_list, k, covariates, outcome, estimator)
     })
