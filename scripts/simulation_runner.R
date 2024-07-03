@@ -384,7 +384,10 @@ simulation = function(n, q, Sigma, method, id, replicate) {
       fit$Sigma_hat = lapply(fit$Sigma_r_hat, function(Sigma) fit$V %*% Sigma %*% t(fit$V))
       fit
     }
-  } else if (method == "mvREML_DR5") {
+  } else if (method == "mvREML") {
+    estimator = mvREML
+  }
+    else if (method == "mvREML_DR5") {
     estimator = mvREML_DR5
   } else if (method == "HE") {
     estimator = function(Y, D_list) {
@@ -427,9 +430,13 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
   true = list(Sigma_0, Sigma_1, Sigma_2)
 
-  beta_error = sapply(1:length(estimate$Sigma_hat), function(k) {
-    beta_error(estimate$Sigma_hat[[k]], true[[k]], Y, D_list, k, covariates, outcome, estimator)
-  })
+  if (id != 3) {
+    beta_error = sapply(1:length(estimate$Sigma_hat), function(k) {
+      beta_error(estimate$Sigma_hat[[k]], true[[k]], Y, D_list, k, covariates, outcome, estimator)
+    })
+  } else {
+    beta_error = NA
+  }
 
   rs = intersect(c(1, 3, 5), 1:(q-1))
   max_principal_angle = sapply(rs, function(r) mapply(max_principal_angle, estimate$Sigma_hat, true, r = r))
