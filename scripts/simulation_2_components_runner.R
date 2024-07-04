@@ -289,7 +289,7 @@ mvREML_DR5 = function(Y, D_list) {
   R = as.numeric(gsub("DR", "", strsplit(method, "-")[[1]][1]))
   Y = PC_Y$x[, 1:R]
 
-  estimate = mvREML(Y, D_list)
+  estimate = mvREML_2(Y, D_list)
   estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(x) PC_Y$rotation[, 1:R] %*% x %*% t(PC_Y$rotation[, 1:R]))
 
   return(estimate)
@@ -301,9 +301,8 @@ simulation = function(n, q, Sigma, method, id, replicate) {
   D_0 = diag(1, nrow = n, ncol = n)
   D_1_and_2 = hcp_kinship(n)
   D_1 = D_1_and_2[[1]]
-  D_2 = D_1_and_2[[2]]
 
-  colnames(D_0) = colnames(D_1) = colnames(D_2) = rownames(D_0) = rownames(D_1) = rownames(D_2) = as.character(1:n)
+  colnames(D_0) = colnames(D_1) = rownames(D_0) = rownames(D_1) = as.character(1:n)
 
   fit = readRDS(file.path(DATA_ANALYSIS_RESULT_PATH, "fit.rds"))
 
@@ -314,10 +313,8 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     set.seed(123)
     Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(q)
     Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(q)
-    Sigma_2 = heritability_prop[3] * get(paste0("generate_", Sigma, "_Sigma"))(q)
     sqrt_Sigma_0 = sqrt(heritability_prop[1]) * attr(Sigma_0, "sqrt")
     sqrt_Sigma_1 = sqrt(heritability_prop[2]) * attr(Sigma_1, "sqrt")
-    sqrt_Sigma_2 = sqrt(heritability_prop[3]) * attr(Sigma_2, "sqrt")
 
     outcome = 1
     covariates = setdiff(1:q, outcome)
@@ -344,10 +341,8 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
     Sigma_0 = Sigma_hat[[1]]
     Sigma_1 = Sigma_hat[[2]]
-    Sigma_2 = Sigma_hat[[3]]
     sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
     sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
-    sqrt_Sigma_2 = attr(Sigma_2, "sqrt")
 
     outcome = 9
     covariates = 92:182
@@ -356,7 +351,6 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
   chol_D_0 = D_0
   chol_D_1 = attr(D_1, "chol")
-  chol_D_2 = attr(D_2, "chol")
 
   if (grepl("smooth", Sigma)) {
    Sigma_0 = Sigma_0 + diag(1, q, q)
@@ -366,8 +360,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
   set.seed(replicate)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
-  Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
-  Y = Epsilon + Gamma_1 + Gamma_2
+  Y = Epsilon + Gamma_1
 
   if (grepl("smoothed", method)) {
     smoothed = TRUE
@@ -376,7 +369,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     smoothed = FALSE
   }
 
-  D_list = list(D_0, D_1, D_2)
+  D_list = list(D_0, D_1)
 
   if (method == "mvHE") {
     estimator = mvHE
@@ -390,7 +383,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     }
   } else if (method == "mvREML") {
     source("scripts/mvREML.R")
-    estimator = mvREML
+    estimator = mvREML_2
   }
     else if (method == "mvREML_DR5") {
     source("scripts/mvREML.R")
@@ -406,7 +399,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
   } else if (method == "REML") {
     source("scripts/mvREML.R")
     estimator = function(Y, D_list) {
-      univariate(Y, D_list, mvREML)
+      univariate(Y, D_list, mvREML_2)
     }
   }
 
@@ -432,10 +425,9 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     set.seed(123)
     Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
     Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
-    Sigma_2 = heritability_prop[3] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
   }
 
-  true = list(Sigma_0, Sigma_1, Sigma_2)
+  true = list(Sigma_0, Sigma_1)
 
   if (id != 3 & !grepl("REML", method) & grepl("mv", method)) {
     beta_error = sapply(1:length(estimate$Sigma_hat), function(k) {
@@ -469,8 +461,8 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
 SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
-RESULT_PATH = paste0("simulation_results_", SIMULATION_ID)
-DATA_ANALYSIS_RESULT_PATH = "data_analysis_results"
+RESULT_PATH = paste0("simulation_2_components_", SIMULATION_ID)
+DATA_ANALYSIS_RESULT_PATH = "data_analysis_2_components"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 replicates = 1:50
