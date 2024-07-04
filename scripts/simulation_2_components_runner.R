@@ -38,11 +38,9 @@ diag_squared_error = function(estimate, truth) {
   }
 }
 
-generate_lowdim_Sigma = function(q) {
-  V = pracma::randortho(q)
-  val = 1/(1:q)
-  matrix = V %*% diag(val) %*% t(V)
-  attr(matrix, "sqrt") = V %*% diag(sqrt(val)) %*% t(V)
+generate_uniform_Sigma = function(q) {
+  matrix = clusterGeneration::rcorrmatrix(q)
+  attr(matrix, "sqrt") = sqrt_matrix(matrix)
   matrix
 }
 
@@ -310,42 +308,46 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
   if (id %in% 1:3) {
 
+    outcome = 1
+    covariates = setdiff(1:q, outcome)
+
     set.seed(123)
     Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(q)
     Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(q)
     sqrt_Sigma_0 = sqrt(heritability_prop[1]) * attr(Sigma_0, "sqrt")
     sqrt_Sigma_1 = sqrt(heritability_prop[2]) * attr(Sigma_1, "sqrt")
 
-    outcome = 1
-    covariates = setdiff(1:q, outcome)
-
   } else if (id == 4) {
+
+    outcome = 9
+    covariates = 92:182
 
     q = ncol(fit$Sigma_hat[[1]])
     Sigma_hat = fit$Sigma_hat
 
     for (k in 1:length(Sigma_hat)) {
-      eig = eigen(Sigma_hat[[k]])
-      if (Sigma == "fast") {
-        eig$val = heritability_prop[k] * (1/(1:q)^2 + 1/(cond_num - 1))
-      } else if (Sigma == "moderate") {
-        eig$val = heritability_prop[k] * (1/(1:q)^1.5 + 1/(cond_num - 1))
-      } else if (Sigma == "slow") {
-        eig$val = heritability_prop[k] * (1/(1:q)^1 + 1/(cond_num - 1))
-      } else if (Sigma == "data") {
-        eig$val = eig$val + eig$val[1] / (cond_num - 1)
+      if (Sigma == "data") {
+        eig = eigen(Sigma_hat[[k]][covariates, covariates])
+        diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
+        attr(Sigma_hat[[k]], "sqrt") = sqrt_matrix(Sigma_hat[[k]])
+      } else {
+        eig = eigen(Sigma_hat[[k]])
+        if (Sigma == "fast") {
+          eig$val = heritability_prop[k] * (1/(1:q)^2 + 1/(cond_num - 1))
+        } else if (Sigma == "moderate") {
+          eig$val = heritability_prop[k] * (1/(1:q)^1.5 + 1/(cond_num - 1))
+        } else if (Sigma == "slow") {
+          eig$val = heritability_prop[k] * (1/(1:q)^1 + 1/(cond_num - 1))
+        } else
+        Sigma_hat[[k]] = eig$vec %*% diag(eig$val) %*% t(eig$vec)
+        attr(Sigma_hat[[k]], "sqrt") = eig$vec %*% diag(sqrt(eig$val)) %*% t(eig$vec)
       }
-      Sigma_hat[[k]] = eig$vec %*% diag(eig$val) %*% t(eig$vec)
-      attr(Sigma_hat[[k]], "sqrt") = eig$vec %*% diag(sqrt(eig$val)) %*% t(eig$vec)
     }
 
     Sigma_0 = Sigma_hat[[1]]
     Sigma_1 = Sigma_hat[[2]]
     sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
     sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
-
-    outcome = 9
-    covariates = 92:182
 
   }
 
@@ -461,7 +463,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
 SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
-RESULT_PATH = paste0("simulation_2_components_", SIMULATION_ID)
+RESULT_PATH = paste0("new_simulation_2_components_", SIMULATION_ID)
 DATA_ANALYSIS_RESULT_PATH = "data_analysis_2_components"
 dir.create(RESULT_PATH, recursive = TRUE)
 
@@ -469,7 +471,7 @@ replicates = 1:50
 
 if (SIMULATION_ID == 1) { # 4800
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
-  Sigmas = "lowdim"
+  Sigmas = "uniform"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
   qs = c(10, 20)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
