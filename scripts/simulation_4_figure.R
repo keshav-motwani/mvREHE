@@ -61,7 +61,7 @@ ggplot(diag_squared_error_df %>%
          summarize(mean = mean(diag_squared_error), se = sd(diag_squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
@@ -107,7 +107,7 @@ ggplot(spectral_error_df %>%
          summarize(mean = mean(spectral_error), se = sd(spectral_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
@@ -132,7 +132,7 @@ ggplot(squared_error_df %>%
          summarize(mean = mean(squared_error), se = sd(squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
@@ -158,7 +158,7 @@ ggplot(beta_error_df %>%
          summarize(mean = mean(beta_error), se = sd(beta_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
@@ -183,7 +183,7 @@ ggplot(max_principal_angle_df %>%
          summarize(mean = mean(value), se = sd(value) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
@@ -202,7 +202,7 @@ ggplot(max_principal_angle_df %>%
          summarize(mean = mean(value), se = sd(value) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
