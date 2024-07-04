@@ -506,7 +506,7 @@ experiment = grid[PARAMETER_ID, "experiment"]
 cond_num = 100
 
 output = simulation(n, q, Sigma, method, SIMULATION_ID, replicate)
-estimate = paste0("Sigma_", 1:3 - 1)
+estimate = paste0("Sigma_", 1:2 - 1)
 
 diag_squared_error = data.frame(replicate = replicate, estimate = estimate, diag_squared_error = output$diag_squared_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 squared_error = data.frame(replicate = replicate, estimate = estimate, squared_error = output$squared_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
