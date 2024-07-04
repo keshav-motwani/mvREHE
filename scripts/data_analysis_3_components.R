@@ -390,11 +390,13 @@ cor_raw_hat[is.na(cor_raw_hat)] = 0
 lambda_raw = cv_ridge_regression(Y, covariates = str_indices, outcomes = outcome, lambda_seq = seq(1, 10, by = 0.5), K = 2)
 beta_raw = solve(cor_raw_hat[str_indices, str_indices] + diag(lambda_raw, length(str_indices), length(str_indices))) %*% cor_raw_hat[str_indices, 9]
 
+max_color = max(abs(unlist(c(beta_components, list(beta_raw)))))
+
 figure = list()
-figure[[1]] = plot_connectome_vec(beta_raw, "Coefficients from Observed Data", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
-figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]], "Coefficients from Genetic Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
-figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]], "Coefficients from Common Env Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
-figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coefficients from Unique Env Component", groups = str_groups, community = community, breaks = c(-0.05, 0, 0.05), colors = c("blue", "white", "red"))
+figure[[1]] = plot_connectome_vec(beta_raw, "Coefficients from Observed Data", groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
+figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]], "Coefficients from Genetic Component", groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
+figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]], "Coefficients from Common Env Component", groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
+figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coefficients from Unique Env Component", groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
 
 pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.6, width = 10)
 print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
