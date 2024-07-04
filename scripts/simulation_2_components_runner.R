@@ -295,6 +295,8 @@ mvREML_DR5 = function(Y, D_list) {
 
 simulation = function(n, q, Sigma, method, id, replicate) {
 
+  set.seed(replicate)
+
   D_0 = diag(1, nrow = n, ncol = n)
   D_1_and_2 = hcp_kinship(n)
   D_1 = D_1_and_2[[1]]
@@ -310,7 +312,6 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     outcome = 1
     covariates = setdiff(1:q, outcome)
 
-    set.seed(123)
     Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(q)
     Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(q)
     sqrt_Sigma_0 = sqrt(heritability_prop[1]) * attr(Sigma_0, "sqrt")
@@ -358,7 +359,6 @@ simulation = function(n, q, Sigma, method, id, replicate) {
    sqrt_Sigma_0 = sqrt_matrix(Sigma_0)
   }
 
-  set.seed(replicate)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
   Y = Epsilon + Gamma_1
@@ -460,7 +460,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
 }
 
-SIMULATION_ID = 4 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
+SIMULATION_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
 RESULT_PATH = paste0("simulation_2_components_", SIMULATION_ID)
 DATA_ANALYSIS_RESULT_PATH = "data_analysis_2_components"
@@ -500,9 +500,9 @@ PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[2])
 print(grid[PARAMETER_ID, ])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = 2000 # grid[PARAMETER_ID, "n"]
-q = grid[PARAMETER_ID, "q"]
-Sigma = "data" # grid[PARAMETER_ID, "Sigma"]
-method = "mvREML_DR5" # as.character(grid[PARAMETER_ID, "method"])
+q = 20 # grid[PARAMETER_ID, "q"]
+Sigma = "uniform" # grid[PARAMETER_ID, "Sigma"]
+method = "mvREHE" # as.character(grid[PARAMETER_ID, "method"])
 experiment = grid[PARAMETER_ID, "experiment"]
 cond_num = 100
 
