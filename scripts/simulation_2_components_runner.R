@@ -284,7 +284,6 @@ mvREML_DR5 = function(Y, D_list) {
   R = 5
 
   PC_Y = prcomp(Y, center = FALSE, scale. = FALSE)
-  R = as.numeric(gsub("DR", "", strsplit(method, "-")[[1]][1]))
   Y = PC_Y$x[, 1:R]
 
   estimate = mvREML_2(Y, D_list)
@@ -461,9 +460,9 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
 }
 
-SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+SIMULATION_ID = 4 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
-RESULT_PATH = paste0("new_simulation_2_components_", SIMULATION_ID)
+RESULT_PATH = paste0("simulation_2_components_", SIMULATION_ID)
 DATA_ANALYSIS_RESULT_PATH = "data_analysis_2_components"
 dir.create(RESULT_PATH, recursive = TRUE)
 
@@ -497,13 +496,13 @@ if (SIMULATION_ID == 1) { # 4800
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 }
 
-PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[2])
+PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[2])
 print(grid[PARAMETER_ID, ])
 replicate = grid[PARAMETER_ID, "replicate"]
-n = grid[PARAMETER_ID, "n"]
+n = 2000 # grid[PARAMETER_ID, "n"]
 q = grid[PARAMETER_ID, "q"]
-Sigma = grid[PARAMETER_ID, "Sigma"]
-method = as.character(grid[PARAMETER_ID, "method"])
+Sigma = "data" # grid[PARAMETER_ID, "Sigma"]
+method = "mvREML_DR5" # as.character(grid[PARAMETER_ID, "method"])
 experiment = grid[PARAMETER_ID, "experiment"]
 cond_num = 100
 
