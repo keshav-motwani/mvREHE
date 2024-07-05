@@ -294,7 +294,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     sqrt_Sigma_0 = sqrt(heritability_prop[1]) * attr(Sigma_0, "sqrt")
     sqrt_Sigma_1 = sqrt(heritability_prop[2]) * attr(Sigma_1, "sqrt")
 
-  } else if (id == 4) {
+  } else {
 
     outcome = 9
     covariates = 92:182
