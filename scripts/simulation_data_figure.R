@@ -1,6 +1,6 @@
 library(tidyverse)
 
-SIMULATION_ID = 4
+SIMULATION_ID = "data"
 COMPONENTS = as.numeric(commandArgs(trailingOnly=TRUE)[1])
 RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
@@ -13,7 +13,7 @@ palette[4:3] = palette[3:4]
 names(palette) = methods
 options(ggplot2.discrete.colour = palette)
 
-Sigmas = c("data", "fast", "moderate", "slow")
+Sigmas = c("data")
 
 files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]
