@@ -329,8 +329,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
   set.seed(replicate)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
-  Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
-  Y = Epsilon + Gamma_1 + Gamma_2
+  Y = Epsilon + Gamma_1
 
   if (grepl("smoothed", method)) {
     smoothed = TRUE
