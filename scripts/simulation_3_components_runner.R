@@ -303,7 +303,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
     covariates = 92:182
 
     Sigma_hat = fit$Sigma_hat
-    q = ncol(fit$Sigma_hat)
+    q = ncol(Sigma_hat[[1]])
 
     for (k in 1:length(Sigma_hat)) {
       eig = eigen(Sigma_hat[[k]][covariates, covariates])
