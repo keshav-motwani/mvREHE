@@ -419,7 +419,7 @@ simulation = function(n, q, Sigma, method, id, replicate) {
 
 }
 
-SIMULATION_ID = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+SIMULATION_ID = commandArgs(trailingOnly=TRUE)[1]
 
 RESULT_PATH = paste0("simulation_2_components_", SIMULATION_ID)
 DATA_ANALYSIS_RESULT_PATH = "data_analysis_2_components"
