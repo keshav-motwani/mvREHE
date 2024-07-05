@@ -69,4 +69,4 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
     theme(legend.position = "bottom") +
     theme(strip.background = element_blank(), strip.placement = "outside") +
     scale_y_continuous(limits = c(0, NA))
-  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", "n", ".pdf")), height = 7.5 * 0.8 * 2 / 3, width = 8.5)
+  ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", "n", ".pdf")), height = 7.5 * 0.8 * 2.2 / 3, width = 8.5)

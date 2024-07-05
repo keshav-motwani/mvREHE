@@ -6,11 +6,12 @@ RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
-methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
+methods = c("mvHE", "mvREHE", "mvREML", "mvREML_DR5", "HE", "REHE", "REML")
 palette = ggsci::pal_aaas("default")(3)
 names(palette) = c("HE", "REHE", "REML")
 options(ggplot2.discrete.colour = palette)
 map = gsub("mv", "", methods)
+map = gsub("_DR5", "", map)
 names(map) = methods
 
 files = list.files(RESULT_PATH, full.names = TRUE)

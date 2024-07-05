@@ -1,18 +1,18 @@
 library(tidyverse)
 
-SIMULATION_ID = 2
+SIMULATION_ID = 4
 RESULT_PATH = paste0("simulation_hcp_results_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
-methods = c("mvHE", "mvREHE", "mvREHE_cvDR", paste0("DR", c(5), "-mvREML"))
+methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
 
 palette = ggsci::pal_aaas("default")(length(methods))
 palette[4:3] = palette[3:4]
 names(palette) = methods
 options(ggplot2.discrete.colour = palette)
 
-Sigmas = c("fast", "moderate", "slow")
+Sigmas = c("data", "fast", "moderate", "slow")
 
 files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]
@@ -49,7 +49,7 @@ names(label) = c("Sigma_1", "Sigma_2", "Sigma_0")
 Sigmas = apply(expand.grid(label, Sigmas), 1, function(x) paste0(x[2], "~(", x[1], ")"))
 
 diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_squared_error)) %>%
-  mutate(estimate = label[estimate]) %>%
+  mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
 
 ggplot(diag_squared_error_df %>%
@@ -95,7 +95,7 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, 
 ### Spectral error
 
 spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)) %>%
-  mutate(estimate = label[estimate]) %>%
+  mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
 
 ggplot(spectral_error_df %>%
@@ -120,7 +120,7 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height
 ### Squared error
 
 squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) %>%
-  mutate(estimate = label[estimate]) %>%
+  mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
 
 ggplot(squared_error_df %>%
@@ -142,10 +142,36 @@ ggplot(squared_error_df %>%
   scale_y_continuous(limits = c(0, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
+
+### Regression coefficients error
+
+beta_error_df = do.call(rbind, lapply(results, function(x) x$beta_error)) %>%
+  mutate(estimate = label[as.character(estimate)]) %>%
+  filter(method %in% methods)
+
+ggplot(beta_error_df %>%
+         filter(experiment == "n" & grepl("mv", method)) %>%
+         mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
+         mutate(facet = factor(facet, levels = Sigmas)) %>%
+         group_by(n, facet, method) %>%
+         summarize(mean = mean(beta_error), se = sd(beta_error) / sqrt(n())),
+       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
+           color = factor(method, levels = names(palette)))) +
+  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  geom_line() +
+  geom_errorbar(width = 0.1) +
+  theme_bw() +
+  xlab("n") +
+  labs(color = "Method", y = expression("E||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
+  theme(legend.position = "bottom") +
+  theme(strip.background = element_blank(), strip.placement = "outside") +
+  scale_y_continuous(limits = c(0, NA))
+ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
+
 ### Max principal angle
 
 max_principal_angle_df = do.call(rbind, lapply(results, function(x) x$max_principal_angle)) %>%
-  mutate(estimate = label[estimate]) %>%
+  mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
 
 ggplot(max_principal_angle_df %>%
