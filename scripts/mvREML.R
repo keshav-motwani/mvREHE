@@ -12,6 +12,16 @@ source("scripts/lme4 - multi/functions/lformulaMV.R")
 
 mvREML = function(Y, D_list) {
 
+  if (length(D_list) == 2) {
+    mvREML_2(Y, D_list)
+  } else if (length(D_list) == 3) {
+    mvREML_3(Y, D_list)
+  }
+
+}
+
+mvREML_3 = function(Y, D_list) {
+
   D_0 = D_list[[1]]
   D_1 = D_list[[2]]
   D_2 = D_list[[3]]
