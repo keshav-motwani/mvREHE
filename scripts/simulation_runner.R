@@ -304,11 +304,15 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
     Sigma_hat = fit$Sigma_hat
     q = ncol(Sigma_hat[[1]])
 
-    cond_num = as.numeric(strsplit(Sigma, "_")[[1]][2])
+    cond_num = as.numeric(strsplit(as.character(Sigma), "_")[[1]][2])
     for (k in 1:length(Sigma_hat)) {
       eig = eigen(Sigma_hat[[k]][covariates, covariates])
       diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
       attr(Sigma_hat[[k]], "sqrt") = sqrt_matrix(Sigma_hat[[k]])
+    }
+
+    if (length(Sigma_hat) == 2) {
+      Sigma_hat[[3]] = NA
     }
 
     Sigma_0 = Sigma_hat[[1]]
@@ -340,11 +344,12 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
   set.seed(replicate)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
-  Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
-  if (components == 2) {
-    Y = Epsilon + Gamma_1
-  } else if (components == 3) {
-    Y = Epsilon + Gamma_1 + Gamma_2
+  if (components == 3) {
+    Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
+  }
+  Y = Epsilon + Gamma_1
+  if (components == 3) {
+    Y = Y + Gamma_2
   }
 
   if (grepl("smoothed", method)) {
