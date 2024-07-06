@@ -443,7 +443,7 @@ dir.create(RESULT_PATH, recursive = TRUE)
 
 replicates = 1:500
 
-if (SIMULATION_ID == "lowdim1") { # 5700
+if (SIMULATION_ID == "lowdim1") { # 48000
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
   Sigmas = "uniform"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
@@ -451,7 +451,7 @@ if (SIMULATION_ID == "lowdim1") { # 5700
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
   qs = 5
   grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n"))
-} else if (SIMULATION_ID == "lowdim2") { # 5700
+} else if (SIMULATION_ID == "lowdim2") { # 48000
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
   Sigmas = "moderate"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
@@ -459,7 +459,7 @@ if (SIMULATION_ID == "lowdim1") { # 5700
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
   qs = 5
   grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n"))
-} else if (SIMULATION_ID == "highdim") { # 3000
+} else if (SIMULATION_ID == "highdim") { # 30000
   methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
   Sigmas = c("fast", "moderate", "slow")
   ns = c(500, 1000, 2000, 4000, 8000)
