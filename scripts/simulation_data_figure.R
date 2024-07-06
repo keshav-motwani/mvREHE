@@ -13,7 +13,7 @@ palette[4:3] = palette[3:4]
 names(palette) = methods
 options(ggplot2.discrete.colour = palette)
 
-Sigmas = c("data")
+Sigmas = c("data_10", "data_100", "data_1000")
 
 files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]
