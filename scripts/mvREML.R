@@ -13,10 +13,17 @@ source("scripts/lme4 - multi/functions/lformulaMV.R")
 mvREML = function(Y, D_list) {
 
   if (length(D_list) == 2) {
-    mvREML_2(Y, D_list)
+    estimate = mvREML_2(Y, D_list)
   } else if (length(D_list) == 3) {
-    mvREML_3(Y, D_list)
+    estimate = mvREML_3(Y, D_list)
   }
+
+  estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(x) {
+    x[is.nan(x)] = 0
+    x
+  })
+  print(estimate)
+  estimate
 
 }
 
