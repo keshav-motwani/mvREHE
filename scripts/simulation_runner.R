@@ -181,11 +181,14 @@ max_principal_angle = function(cov_estimate, cov_truth, r) {
   if (!is.null(cov_estimate) & !is.null(cov_truth)) {
 
     if (ncol(cov_truth) > ncol(cov_estimate)) {
-      cov_estimate = expand_cov_estimate(cov_estimate, ncol(cov_truth))
+      cov_estimate = expand_estimate(cov_estimate, ncol(cov_truth))
     }
 
-    X = eigen(cov_estimate)$vectors[, 1:r, drop = FALSE]
-    Y = eigen(cov_truth)$vectors[, 1:r, drop = FALSE]
+    cor_estimate = cov2cor(cov_estimate)
+    cor_estimate[is.na(cor_estimate)] = 0
+
+    X = eigen(cor_estimate)$vectors[, 1:r, drop = FALSE]
+    Y = eigen(cov2cor(cov_truth))$vectors[, 1:r, drop = FALSE]
 
     pracma::subspace(X, Y) * 180 / pi
 
@@ -206,7 +209,7 @@ beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates,
   cor_estimate = cov2cor(cov_estimate)
   cor_estimate[is.na(cor_estimate)] = 0
   max_eigenvalue = max(eigen(cor_estimate)$values)
-  lambda_seq = seq(max_eigenvalue / 1000, max_eigenvalue, length.out = 10)
+  lambda_seq = 10^seq(log10(max_eigenvalue / 1000), log10(max_eigenvalue), length.out = 100)
 
   lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
   beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
@@ -231,18 +234,20 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
 
   cv_loss = numeric(length(lambda_seq))
 
-  for (l in 1:length(lambda_seq)) {
-
-    for (k in 1:K) {
-
-      fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]))
-      cor_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
-      cor_hat_train[is.na(cor_hat_train)] = 0
+  for (k in 1:K) {
+  
+    fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]))
+    cor_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
+    cor_hat_train[is.na(cor_hat_train)] = 0
+    
+    fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]))
+    cor_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
+    cor_hat_test[is.na(cor_hat_test)] = 0
+    
+    for (l in 1:length(lambda_seq)) {
+    
       beta_hat = solve(cor_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% cor_hat_train[covariates, outcomes]
 
-      fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]))
-      cor_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
-      cor_hat_test[is.na(cor_hat_test)] = 0
       cv_loss[l] = cv_loss[l] - 2 * cor_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% cor_hat_test[covariates, covariates] %*% beta_hat
 
     }
@@ -328,17 +333,20 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
   chol_D_1 = attr(D_1, "chol")
   chol_D_2 = attr(D_2, "chol")
 
+  if (id == "smooth") {
+   sqrt_Sigma_0 = sqrt_matrix(Sigma_0 + diag(1, q, q))
+   set.seed(123)
+   Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
+   Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
+   Sigma_2 = heritability_prop[3] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
+  }
+
   if (components == 2) {
     Sigma_list_truth = list(Sigma_0, Sigma_1)
     D_list = list(D_0, D_1)
   } else if (components == 3) {
     Sigma_list_truth = list(Sigma_0, Sigma_1, Sigma_2)
     D_list = list(D_0, D_1, D_2)
-  }
-
-  if (id == "smooth") {
-   Sigma_0 = Sigma_0 + diag(1, q, q)
-   sqrt_Sigma_0 = sqrt_matrix(Sigma_0)
   }
 
   set.seed(replicate)
@@ -365,7 +373,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
     estimator = mvREHE
   } else if (method == "mvREHE_cvDR") {
     estimator = function(Y, D_list) {
-      fit = mvREHE_cvDR(Y, D_list, K = 5, r_seq = intersect(1:q, c(5, 10, 50, 100, q)), compute_full_Sigma = TRUE)
+      fit = mvREHE_cvDR(Y, D_list, K = 5, r_seq = floor(seq(5, q, length.out = 20)), compute_full_Sigma = TRUE)
       fit$Sigma_hat = lapply(fit$Sigma_r_hat, function(Sigma) fit$V %*% Sigma %*% t(fit$V))
       fit
     }
@@ -409,7 +417,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
     time = system.time({estimate$Sigma_hat = lapply(estimate$Sigma_hat, smooth_cov)})[3] + time
   }
 
-  if (grepl("lowdim|data", id) & !grepl("REML", method) & grepl("mv", method)) {
+  if (grepl("lowdim|data", id) & !grepl("REML|cv", method) & grepl("mv", method)) {
     beta_error = sapply(1:length(estimate$Sigma_hat), function(k) {
       beta_error(estimate$Sigma_hat[[k]], Sigma_list_truth[[k]], Y, D_list, k, covariates, outcome, estimator)
     })
