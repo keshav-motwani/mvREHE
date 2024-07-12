@@ -18,11 +18,13 @@ mvREML = function(Y, D_list) {
     estimate = mvREML_3(Y, D_list)
   }
 
-  estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(x) {
-    x[is.nan(x)] = 0
-    x
-  })
-  print(estimate)
+  if (any(sapply(estimate$Sigma_hat, function(Sigma) any(is.na(Sigma))))) {
+    estimate$Sigma_hat = lapply(estimate$Sigma_hat, function(Sigma) {
+      Sigma[] = NA
+      Sigma
+    })
+  }
+
   estimate
 
 }
