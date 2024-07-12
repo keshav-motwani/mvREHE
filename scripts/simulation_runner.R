@@ -178,7 +178,7 @@ var_prop = function(Sigma_list) {
 
 max_principal_angle = function(cov_estimate, cov_truth, r) {
 
-  if (!is.null(cov_estimate) & !is.null(cov_truth)) {
+  if (!is.null(cov_estimate) & !is.null(cov_truth) & !any(is.na(cov_estimate))) {
 
     if (ncol(cov_truth) > ncol(cov_estimate)) {
       cov_estimate = expand_estimate(cov_estimate, ncol(cov_truth))
