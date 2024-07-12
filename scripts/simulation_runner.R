@@ -235,17 +235,17 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
   cv_loss = numeric(length(lambda_seq))
 
   for (k in 1:K) {
-  
+
     fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]))
     cor_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
     cor_hat_train[is.na(cor_hat_train)] = 0
-    
+
     fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]))
     cor_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
     cor_hat_test[is.na(cor_hat_test)] = 0
-    
+
     for (l in 1:length(lambda_seq)) {
-    
+
       beta_hat = solve(cor_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% cor_hat_train[covariates, outcomes]
 
       cv_loss[l] = cv_loss[l] - 2 * cor_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% cor_hat_test[covariates, covariates] %*% beta_hat
@@ -456,33 +456,33 @@ dir.create(RESULT_PATH, recursive = TRUE)
 
 replicates = 1:50
 
-if (SIMULATION_ID == "lowdim1") { # 48000
+if (SIMULATION_ID == "lowdim1") { # 5050
   methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
   Sigmas = "uniform"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
   qs = c(5, 10, 20)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
   grid = grid[grid$method != "mvREML" | (grid$method == "mvREML" & grid$q == 5) | (grid$method == "mvREML" & grid$q == 10 & grid$n <= 4000), ]
-} else if (SIMULATION_ID == "lowdim2") { # 48000
+} else if (SIMULATION_ID == "lowdim2") { # 5050
   methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
   Sigmas = "moderate"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
   qs = c(5, 10, 20)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
   grid = grid[grid$method != "mvREML" | (grid$method == "mvREML" & grid$q == 5) | (grid$method == "mvREML" & grid$q == 10 & grid$n <= 4000), ]
-} else if (SIMULATION_ID == "highdim") { # 30000
+} else if (SIMULATION_ID == "highdim") { # 3000
   methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
   Sigmas = c("fast", "moderate", "slow")
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = 1000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
-} else if (SIMULATION_ID == "smooth") { # 20000
+} else if (SIMULATION_ID == "smooth") { # 2000
   methods = c("mvHE", "mvREHE", "mvHE-smoothed", "mvREHE-smoothed")
   Sigmas = c("smooth_1", "smooth_2")
   qs = 100
   ns = c(500, 1000, 2000, 4000, 8000)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
-} else if (SIMULATION_ID == "data") { # 30000
+} else if (SIMULATION_ID == "data") { # 3000
   methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
   Sigmas = c("data_10", "data_100", "data_1000")
   ns = c(500, 1000, 2000, 4000, 8000)
