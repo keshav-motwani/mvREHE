@@ -14,6 +14,8 @@ names(palette) = methods
 options(ggplot2.discrete.colour = palette)
 
 Sigmas = c("data_10", "data_100", "data_1000")
+Sigma_labels = paste0("cond == ", unlist(lapply(strsplit(Sigmas, "_"), `[[`, 2)))
+names(Sigma_labels) = Sigmas
 
 files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]
@@ -29,7 +31,7 @@ time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
 
 ggplot(time_df %>%
          filter(experiment == "n") %>%
-         mutate(facet = Sigma) %>%
+         mutate(facet = Sigma_labels[Sigma]) %>%
          mutate(facet = factor(facet, levels = Sigmas)),
        aes(x = n, y = log10(mean), ymin = log10(mean - 1.96 * se), ymax = log10(mean + 1.96 * se), color = factor(gsub(".elapsed", "", method), levels = names(palette)), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
@@ -47,7 +49,7 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, widt
 label = c("hat(Sigma)[G]", "hat(Sigma)[C]", "hat(Sigma)[E]")
 names(label) = c("Sigma_1", "Sigma_2", "Sigma_0")
 
-Sigmas = apply(expand.grid(label, Sigmas), 1, function(x) paste0(x[2], "~(", x[1], ")"))
+Sigmas = apply(expand.grid(label, Sigma_labels), 1, function(x) paste0(x[2], "~(", x[1], ")"))
 
 diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_squared_error)) %>%
   mutate(estimate = label[as.character(estimate)]) %>%
@@ -55,7 +57,7 @@ diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_square
 
 ggplot(diag_squared_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
-         mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
+         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(diag_squared_error), se = sd(diag_squared_error) / sqrt(n())),
@@ -80,7 +82,7 @@ h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
 
 ggplot(h2_df %>%
          filter(experiment == "n") %>%
-         mutate(facet = Sigma),
+         mutate(facet = Sigma_labels[Sigma]),
        aes(x = n, y = sqrt(mean), ymin = sqrt(mean - 1.96 * se), ymax = sqrt(mean + 1.96 * se),
            color = factor(method, levels = names(palette)), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
@@ -101,7 +103,7 @@ spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)
 
 ggplot(spectral_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
-         mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
+         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(spectral_error), se = sd(spectral_error) / sqrt(n())),
@@ -126,7 +128,7 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
 
 ggplot(squared_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
-         mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
+         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(squared_error), se = sd(squared_error) / sqrt(n())),
@@ -152,7 +154,7 @@ beta_error_df = do.call(rbind, lapply(results, function(x) x$beta_error)) %>%
 
 ggplot(beta_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
-         mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
+         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(beta_error), se = sd(beta_error) / sqrt(n())),
@@ -177,7 +179,7 @@ max_principal_angle_df = do.call(rbind, lapply(results, function(x) x$max_princi
 
 ggplot(max_principal_angle_df %>%
          filter(experiment == "n" & grepl("mv", method) & r == 1) %>%
-         mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
+         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(value), se = sd(value) / sqrt(n())),
@@ -196,7 +198,7 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_1_n.pdf"),
 
 ggplot(max_principal_angle_df %>%
          filter(experiment == "n" & grepl("mv", method) & r == 3) %>%
-         mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
+         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(value), se = sd(value) / sqrt(n())),
