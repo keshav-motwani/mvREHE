@@ -456,13 +456,13 @@ dir.create(RESULT_PATH, recursive = TRUE)
 
 replicates = 1:50
 
-if (SIMULATION_ID == "lowdim1") { # 5050
+if (SIMULATION_ID == "lowdim1") { # 5000
   methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
   Sigmas = "uniform"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
   qs = c(5, 10, 20)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
-  grid = grid[grid$method != "mvREML" | (grid$method == "mvREML" & grid$q == 5) | (grid$method == "mvREML" & grid$q == 10 & grid$n <= 4000), ]
+  grid = grid[grid$method != "mvREML" | (grid$method == "mvREML" & grid$q == 5) | (grid$method == "mvREML" & grid$q == 10 & grid$n <= 2000), ]
 } else if (SIMULATION_ID == "highdim") { # 3000
   methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
   Sigmas = c("fast", "moderate", "slow")
