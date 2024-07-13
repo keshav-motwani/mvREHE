@@ -69,5 +69,5 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
     labs(color = "Method", linetype = "Method", y = expression(integral(integral((hat(C)[k](s, t) - C[k](s, t)))^2)*ds*dt), x = "n") +
     theme(legend.position = "bottom") +
     theme(strip.background = element_blank(), strip.placement = "outside") +
-    scale_y_continuous(limits = c(0, NA))
+    scale_y_continuous(limits = c(NA, NA))
   ggsave(file.path(FIGURES_PATH, paste0("simulation_figure_squared_error_", "n", ".pdf")), height = 7.5 * 0.8 * 2.2 / 3, width = 8.5)

@@ -31,7 +31,7 @@ ggplot(time_df %>%
          mutate(facet = paste0("q = ", q)) %>%
          mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))),
        aes(x = n, y = log10(mean), ymin = log10(mean - 1.96 * se), ymax = log10(mean + 1.96 * se), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
-  facet_wrap(~facet, scales = "free_y", nrow = 1) +
+  facet_wrap(~facet, scales = "fixed", nrow = 1) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
@@ -69,7 +69,7 @@ ggplot(diag_squared_error_df %>%
   labs(color = "Method", linetype = "", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(0, NA))
+  scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_diag_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ### h2 error
@@ -120,7 +120,7 @@ ggplot(spectral_error_df %>%
   labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(0, NA))
+  scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ### Squared error
@@ -145,7 +145,7 @@ ggplot(squared_error_df %>%
   labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(0, NA))
+  scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ### Regression coefficients error
@@ -170,7 +170,7 @@ ggplot(beta_error_df %>%
   labs(color = "Method", y = expression("E||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(0, NA))
+  scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ### Principal angle
@@ -195,7 +195,7 @@ ggplot(max_principal_angle_df %>%
   labs(color = "Method", y = "Principal angle - 1 PC", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(0, NA))
+  scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_principal_angle_1_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ggplot(max_principal_angle_df %>%
@@ -214,5 +214,5 @@ ggplot(max_principal_angle_df %>%
   labs(color = "Method", y = "Max principal angle - 3 PCs", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(0, NA))
+  scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_principal_angle_3_n.pdf"), height = 7.5 * 0.8, width = 8.5)
