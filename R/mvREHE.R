@@ -152,6 +152,8 @@ mvREHE_cvDR = function(Y, D_list, r_seq = NULL, V_function = svd_irlba, K = 5, f
     stopifnot(length(setdiff(unlist(folds), 1:nrow(Y))) == 0)
   }
 
+  r_seq = intersect(r_seq, 1:min(lengths(folds)))
+
   q = ncol(Y)
 
   precomputed_values = precompute_cv(Y, D_list, folds, compute_W = FALSE, V_function = V_function, r = max(r_seq))
