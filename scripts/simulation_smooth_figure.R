@@ -24,7 +24,7 @@ names(Sigma_labels) = c("smooth_1", "smooth_2")
 
 time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
   group_by(n, q, Sigma, experiment, method) %>%
-  summarize(mean = mean(time), se = sd(time) / sqrt(n())) %>%
+  summarize(mean = mean(na.rm = TRUE, time), se = sd(na.rm = TRUE, time) / sqrt(n())) %>%
   filter(method %in% methods)
 
 ggplot(time_df %>%
@@ -58,7 +58,7 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
            mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
            mutate(facet = factor(facet, levels = Sigmas)) %>%
            group_by(n, facet, method) %>%
-           summarize(mean = mean(squared_error) / 1000^2, se = sd(squared_error) / sqrt(n()) / 1000^2),
+           summarize(mean = mean(na.rm = TRUE, squared_error) / 1000^2, se = sd(na.rm = TRUE, squared_error) / sqrt(n()) / 1000^2),
          aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
              color = factor(method, levels = names(palette)))) +
     facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +

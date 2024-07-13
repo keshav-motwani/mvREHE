@@ -24,7 +24,7 @@ results = lapply(files, readRDS)
 
 time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
   group_by(n, q, Sigma, experiment, method) %>%
-  summarize(mean = mean(time), se = sd(time) / sqrt(n())) %>%
+  summarize(mean = mean(na.rm = TRUE, time), se = sd(na.rm = TRUE, time) / sqrt(n())) %>%
   filter(method %in% methods)
 
 ggplot(time_df %>%
@@ -58,7 +58,7 @@ ggplot(diag_squared_error_df %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
-         summarize(mean = mean(diag_squared_error), se = sd(diag_squared_error) / sqrt(n())),
+         summarize(mean = mean(na.rm = TRUE, diag_squared_error), se = sd(na.rm = TRUE, diag_squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
   facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
@@ -75,7 +75,7 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_diag_squared_error_n.pdf"), he
 
 h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
   group_by(n, q, Sigma, experiment, method) %>%
-  summarize(mean = mean(h2_error), se = sd(h2_error) / sqrt(n())) %>%
+  summarize(mean = mean(na.rm = TRUE, h2_error), se = sd(na.rm = TRUE, h2_error) / sqrt(n())) %>%
   filter(method %in% methods)
 
 ggplot(h2_df %>%
@@ -104,7 +104,7 @@ ggplot(spectral_error_df %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
-         summarize(mean = mean(spectral_error), se = sd(spectral_error) / sqrt(n())),
+         summarize(mean = mean(na.rm = TRUE, spectral_error), se = sd(na.rm = TRUE, spectral_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
   facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
@@ -129,7 +129,7 @@ ggplot(squared_error_df %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
-         summarize(mean = mean(squared_error), se = sd(squared_error) / sqrt(n())),
+         summarize(mean = mean(na.rm = TRUE, squared_error), se = sd(na.rm = TRUE, squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
   facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
@@ -155,7 +155,7 @@ ggplot(beta_error_df %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
-         summarize(mean = mean(beta_error), se = sd(beta_error) / sqrt(n())),
+         summarize(mean = mean(na.rm = TRUE, beta_error), se = sd(na.rm = TRUE, beta_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
   facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
@@ -180,7 +180,7 @@ ggplot(max_principal_angle_df %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
-         summarize(mean = mean(value), se = sd(value) / sqrt(n())),
+         summarize(mean = mean(na.rm = TRUE, value), se = sd(na.rm = TRUE, value) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
   facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
@@ -199,7 +199,7 @@ ggplot(max_principal_angle_df %>%
          mutate(facet = paste0(Sigma, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
-         summarize(mean = mean(value), se = sd(value) / sqrt(n())),
+         summarize(mean = mean(na.rm = TRUE, value), se = sd(na.rm = TRUE, value) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(method, levels = names(palette)))) +
   facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
