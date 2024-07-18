@@ -476,8 +476,8 @@ if (SIMULATION_ID == "lowdim1") { # 5000
   ns = c(500, 1000, 2000, 4000, 8000)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 } else if (SIMULATION_ID == "data") { # 3000
-  methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
-  Sigmas = c("data_10", "data_100", "data_1000")
+  methods = c("mvHE", "mvREHE")
+  Sigmas = c("data_1.01", "data_10", "data_100", "data_1000", "data_10000")
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = NA
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
