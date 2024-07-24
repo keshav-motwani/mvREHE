@@ -116,7 +116,7 @@ if (file.exists("data/str_connectomes.rds")) {
 ## This is to avoid using inner_join(by = "subject") https://stackoverflow.com/questions/64692005/how-do-i-split-a-data-frame-then-apply-inner-join
 common_subjects = intersect(id_subjects, id_subjects[!sapply(fun_connectomes,is.null)]) %>%
   intersect(id_subjects[!sapply(str_connectomes,is.null)])
-
+common_subjects = setdiff(common_subjects, id_subjects[366])
 # keep only rows with common_subjects in each data frame
 
 K_G = K_G[id_subjects %in% common_subjects,id_subjects %in% common_subjects] # Kinship matrix
@@ -146,7 +146,7 @@ from_vec_to_conn = function(vec_conn)
 }
 
 # Plot rotated PC modes of variation
-plot_connectome_vec = function(connectome_vec, title, groups, community = FALSE, breaks = NULL, colors = NULL) {
+plot_connectome_vec = function(connectome_vec, title, groups, community = FALSE, breaks = NULL, colors = NULL, legend = FALSE) {
   if (length(connectome_vec) == 0) {
     return(NA)
   }
@@ -171,9 +171,10 @@ plot_connectome_vec = function(connectome_vec, title, groups, community = FALSE,
     column_title_gp = grid::gpar(fontsize = 5),
     column_title_rot = 90,
     row_title_rot = 0,
-    show_heatmap_legend = FALSE,
+    show_heatmap_legend = legend,
     show_row_names = FALSE,
-    show_column_names = FALSE
+    show_column_names = FALSE,
+    heatmap_legend_param = list(title = expression("mvREHE"~hat(h)[j]^2), legend_height = unit(2, "cm"), labels_gp = gpar(fontsize = 5), title_gp = gpar(fontsize = 5))
   )
   grid::grid.grabExpr(ComplexHeatmap::draw(heatmap, column_title = title, column_title_gp = grid::gpar(fontsize = 8)))
 }
@@ -310,7 +311,7 @@ str_groups = colnames(str_connectomes[[1]])
 
 connection_names = outer(fun_groups, fun_groups, "paste")
 connection_names = connection_names[lower.tri(connection_names, diag = TRUE)]
-outcome = grep("SMM AUD", connection_names)[1]
+outcome = grep("VIS COP", connection_names)[1]
 
 fixed_effects = TRUE
 residuals = lsfit(X, Y, intercept = FALSE)$residuals
@@ -340,8 +341,13 @@ print(time.taken)
 
 saveRDS(fit, file.path(RESULT_PATH, "fit.rds"))
 
+source("scripts/mvREML.R")
+fit_REML = univariate(Y, D_list, mvREML)
+Sigma_hat_REML = lapply(fit_REML$Sigma_hat, function(Sigma) diag(attr(Y, "scaled:scale")) %*% Sigma %*% diag(attr(Y, "scaled:scale")))
+
 # Heritability estimate
 print(sapply(Sigma_hat, function(x) sum(diag(x)))/sum(sapply(Sigma_hat, function(x) sum(diag(x)))))
+print(sapply(Sigma_hat_REML, function(x) sum(diag(x)))/sum(sapply(Sigma_hat_REML, function(x) sum(diag(x)))))
 
 # Extract loadings of a PCA on the genetic correlation structure
 cor_gen = cov2cor(Sigma_hat[[genetic_component]])
@@ -356,6 +362,44 @@ vv_raw = eigen(cor_Y, symmetric = TRUE)$vectors
 vv_raw = vv_raw %*% diag(sign(colMeans(vv_raw)))
 
 community = TRUE
+
+h2_mvREHE = diag(Sigma_hat[[genetic_component]]) / (diag(Sigma_hat[[genetic_component]]) + diag(Sigma_hat[[common_env_component]]) + diag(Sigma_hat[[unique_env_component]]))
+h2_mvREHE[is.na(h2_mvREHE)] = 0
+h2_REML = diag(Sigma_hat_REML[[genetic_component]]) / (diag(Sigma_hat_REML[[genetic_component]]) + diag(Sigma_hat_REML[[common_env_component]]) + diag(Sigma_hat_REML[[unique_env_component]]))
+h2_REML[is.na(h2_REML)] = 0
+
+str_groups[order(colSums(from_vec_to_conn(h2_mvREHE[str_indices])), decreasing = TRUE)]
+fun_groups[order(colSums(from_vec_to_conn(h2_mvREHE[fun_indices])), decreasing = TRUE)]
+max(h2_mvREHE)
+max(h2_REML)
+fun_h2 = from_vec_to_conn(h2_mvREHE[fun_indices])
+diag(fun_h2) = 0
+fun_groups[which(fun_h2 == max(fun_h2), arr.ind = TRUE)[1, ]]
+
+h2 = data.frame(REML = h2_REML, mvREHE = h2_mvREHE)
+library(ggplot2)
+h2_plot = ggplot(h2, aes(x = REML, y = mvREHE, color = ifelse(1:nrow(h2) %in% str_indices, "Structural", "Functional"))) +
+  geom_point(size = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  theme_bw() +
+  coord_equal() +
+  xlim(0, 0.6) +
+  ylim(0, 0.6) +
+  ylab(expression(hat(h)[j]^2~"from mvREHE")) +
+  xlab(expression(hat(h)[j]^2~"from REML")) +
+  labs(color = "Connection Type") +
+  theme(legend.position = "top", text=element_text(size=7))
+
+figure = list()
+figure[[2]] = plot_connectome_vec(h2_mvREHE[fun_indices], expression(hat(h)[j]^2~"- Functional"), groups = fun_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), legend = TRUE)
+figure[[1]] = plot_connectome_vec(h2_mvREHE[str_indices], expression(hat(h)[j]^2~"- Structural"), groups = str_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"))
+figure[[3]] = h2_plot
+pdf(file.path(RESULT_PATH, "heritability.pdf"), height = 2.6, width = 8)
+print(cowplot::plot_grid(plotlist = figure, ncol = 3, byrow = TRUE, rel_widths = c(0.3, 0.36, 0.36)))
+dev.off()
+
+
+
 
 figure = list()
 # figure[[1]] = plot_connectome_vec(Y_mean[fun_indices], "Functional Mean", groups = fun_groups, community = community)
@@ -401,3 +445,14 @@ figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]], "Coef
 pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.6, width = 10)
 print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
 dev.off()
+
+beta_raw[outcome]
+beta_components[[genetic_component]][outcome]
+beta_components[[common_env_component]][outcome]
+beta_components[[unique_env_component]][outcome]
+
+str_groups[order(colSums(from_vec_to_conn(beta_components[[genetic_component]])), decreasing = TRUE)]
+connection_names[order(beta_components[[genetic_component]], decreasing = TRUE)]
+
+str_groups[order(colSums(from_vec_to_conn(beta_components[[genetic_component]])), decreasing = FALSE)]
+connection_names[order(beta_components[[genetic_component]], decreasing = FALSE)]
