@@ -128,24 +128,6 @@ hcp_kinship = function(n) {
 
 }
 
-univariate = function(Y, D_list, method_fn) {
-
-  q = ncol(Y)
-
-  estimates = apply(Y, 2, FUN = method_fn, D_list = D_list, simplify = FALSE)
-
-  Sigma_hat = lapply(1:length(D_list), function(i) matrix(0, q, q))
-
-  for (j in 1:q) {
-    for (k in 1:length(D_list)) {
-      Sigma_hat[[k]][j, j] = estimates[[j]]$Sigma_hat[[k]][1, 1]
-    }
-  }
-
-  return(list(Sigma_hat = Sigma_hat))
-
-}
-
 smooth_cov = function(cov, diag = FALSE, output_size = 1000) {
 
   obsGrid = seq(0, 1, length.out = ncol(cov))
@@ -170,9 +152,12 @@ smooth_cov = function(cov, diag = FALSE, output_size = 1000) {
 
 }
 
-var_prop = function(Sigma_list) {
+h2_error = function(Sigma_list_estimate, Sigma_list_truth) {
 
-  sapply(Sigma_list, function(x) sum(diag(x))) / sum(sapply(Sigma_list, function(x) sum(diag(x))))
+  h2_estimate = sapply(1:ncol(Sigma_list_estimate[[1]]), function(j) Sigma_list_estimate[[2]][j, j] / sum(sapply(Sigma_list_estimate, function(Sigma) Sigma[j, j])))
+  h2_truth = sapply(1:ncol(Sigma_list_truth[[1]]), function(j) Sigma_list_truth[[2]][j, j] / sum(sapply(Sigma_list_estimate, function(Sigma) Sigma[j, j])))
+
+  sqrt(sum((h2_estimate - h2_truth)^2))
 
 }
 
@@ -441,7 +426,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
     squared_error = mapply(squared_error, estimate$Sigma_hat, Sigma_list_truth),
     diag_squared_error = mapply(diag_squared_error, estimate$Sigma_hat, Sigma_list_truth),
     max_principal_angle = max_principal_angle,
-    h2_error = (var_prop(estimate$Sigma_hat)[2] - var_prop(Sigma_list_truth)[2])^2,
+    h2_error = h2_error(estimate$Sigma_hat, Sigma_list_truth),
     beta_error = beta_error
   ))
 
@@ -476,7 +461,7 @@ if (SIMULATION_ID == "lowdim1") { # 5000
   ns = c(500, 1000, 2000, 4000, 8000)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 } else if (SIMULATION_ID == "data") { # 3000
-  methods = c("mvHE", "mvREHE")
+  methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
   Sigmas = c("data_1.01", "data_10", "data_100", "data_1000", "data_10000")
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = NA
