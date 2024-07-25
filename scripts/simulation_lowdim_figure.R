@@ -90,7 +90,7 @@ ggplot(h2_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = expression(sqrt(E(hat(h)^2 - h^2)^2))) +
+  labs(color = "Method", linetype = "", y = expression("E||"*hat(h)^2 - h^2*"||"[2])) +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
