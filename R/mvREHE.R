@@ -26,7 +26,7 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
 
   if (is.null(lambda)) lambda = rep(0, K)
   if (is.null(Sigma_init_list)) {
-    Sigma_list = lapply(1:length(D_list), function(i) diag(1, q, q))
+    Sigma_list = lapply(1:length(D_list), function(i) diag(matrixStats::colVars(Y), q, q))
   } else if (is.character(Sigma_init_list) && Sigma_init_list == "mvHE") {
     Sigma_list = mvHE(Y, D_list)$Sigma_hat
   } else {
@@ -65,6 +65,9 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
       #   break
       # }
       difference[iter] = mean(mapply(Sigma_list_old, Sigma_list, FUN = function(x, y) norm(x - y, "F") / norm(x, "F")), na.rm = TRUE)
+      if (iter > 1 && is.na(difference[iter])) {
+        break
+      }
       if (iter > 1 && difference[iter] < tolerance) {
         break
       }
