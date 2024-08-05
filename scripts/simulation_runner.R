@@ -128,6 +128,18 @@ hcp_kinship = function(n) {
 
 }
 
+extract_blocks = function(mat) {
+  g = igraph::graph.adjacency(mat, weighted = TRUE)
+  groups = unique(lapply(Map(sort, igraph::neighborhood(g, nrow(mat))), as.numeric))
+  return(groups)
+}
+
+make_t_distributed = function(mat, blocks) {
+
+  diag(rep(sqrt(df / rchisq(length(blocks), df)), lengths(blocks))) %*% mat * sqrt((df - 2) / df)
+
+}
+
 smooth_cov = function(cov, diag = FALSE, output_size = 1000) {
 
   obsGrid = seq(0, 1, length.out = ncol(cov))
@@ -337,13 +349,22 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
   set.seed(replicate)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
-  if (components == 3) {
-    Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
+  Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
+
+  if (id == "lowdim-t") {
+    df = 5
+    blocks = extract_blocks(D_2)
+    Epsilon = make_t_distributed(Epsilon, blocks)
+    Gamma_1 = make_t_distributed(Gamma_1, blocks)
+    Gamma_2 = make_t_distributed(Gamma_2, blocks)
   }
+
   Y = Epsilon + Gamma_1
   if (components == 3) {
     Y = Y + Gamma_2
   }
+
+
 
   if (grepl("smoothed", method)) {
     smoothed = TRUE
@@ -441,7 +462,7 @@ dir.create(RESULT_PATH, recursive = TRUE)
 
 replicates = 1:50
 
-if (SIMULATION_ID == "lowdim1") { # 5000
+if (grepl("lowdim", SIMULATION_ID)) { # 5000
   methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
   Sigmas = "uniform"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
