@@ -134,7 +134,7 @@ extract_blocks = function(mat) {
   return(groups)
 }
 
-make_t_distributed = function(mat, blocks) {
+make_t_distributed = function(mat, blocks, df) {
 
   diag(rep(sqrt(df / rchisq(length(blocks), df)), lengths(blocks))) %*% mat * sqrt((df - 2) / df)
 
@@ -354,9 +354,9 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
   if (id == "lowdim-t") {
     df = 5
     blocks = extract_blocks(D_2)
-    Epsilon = make_t_distributed(Epsilon, blocks)
-    Gamma_1 = make_t_distributed(Gamma_1, blocks)
-    Gamma_2 = make_t_distributed(Gamma_2, blocks)
+    Epsilon = make_t_distributed(Epsilon, blocks, df)
+    Gamma_1 = make_t_distributed(Gamma_1, blocks, df)
+    Gamma_2 = make_t_distributed(Gamma_2, blocks, df)
   }
 
   Y = Epsilon + Gamma_1
