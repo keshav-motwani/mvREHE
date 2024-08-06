@@ -43,7 +43,7 @@ ggplot(time_df %>%
   xlab("n") +
   labs(color = "Method", linetype = "", y = "log10(seconds)") +
   theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside")
+  theme(strip.background = element_blank(), strip.placement = "outside", plot.margin = unit(c(5 / 72.27, 2.5, 5 / 72.27, 2.5), "in"))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, width = 8.5)
 
 ### Squared error on diagonal
@@ -94,7 +94,7 @@ plot1 = ggplot(h2_df %>%
   xlab("n") +
   labs(color = "Method", linetype = "", y = expression("E||"*hat(h)^2 - h^2*"||"[2])) +
   theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside", plot.margin = unit(c(5 / 72.27, 2.5, 5 / 72.27, 2.5), "in"))
+  theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
 
 ### Spectral error
@@ -168,7 +168,7 @@ plot2 = ggplot(beta_error_df %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(na.rm = TRUE, beta_error), se = sd(na.rm = TRUE, beta_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+           color = factor(map[method], levels = names(palette)), linetype = factor(ifelse(grepl("mv", method), "Multivariate", "Univariate"), levels = c("Multivariate", "Univariate")), group = method)) +
   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
@@ -193,7 +193,7 @@ plot3 = ggplot(max_principal_angle_df %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(na.rm = TRUE, value), se = sd(na.rm = TRUE, value) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+           color = factor(map[method], levels = names(palette)), linetype = factor(ifelse(grepl("mv", method), "Multivariate", "Univariate"), levels = c("Multivariate", "Univariate")), group = method)) +
   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
@@ -224,9 +224,9 @@ ggplot(max_principal_angle_df %>%
   scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_3_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
-design = "#A#
-          BBB
-          CCC"
+design = "#AA#
+          BBBB
+          CCCC"
 patchwork::wrap_plots(A = plot1, B = plot2, C = plot3, design = design) +
   patchwork::plot_layout(guides = "collect")
 
