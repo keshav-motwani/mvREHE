@@ -233,4 +233,4 @@ patchwork::wrap_plots(A = plot1, B = plot2, C = plot3, design = design) +
   patchwork::plot_layout(guides = "collect") &
   theme(legend.position='bottom')
 
-ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 9, width = 8.5)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 7, width = 8.5)
