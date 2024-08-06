@@ -82,7 +82,7 @@ h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
   summarize(mean = mean(na.rm = TRUE, h2_error), se = sd(na.rm = TRUE, h2_error) / sqrt(n())) %>%
   filter(method %in% methods)
 
-ggplot(h2_df %>%
+plot1 = ggplot(h2_df %>%
          filter(experiment == "n") %>%
          mutate(facet = Sigma_labels[Sigma]),
        aes(x = n, y = sqrt(mean), ymin = sqrt(mean - 1.96 * se), ymax = sqrt(mean + 1.96 * se),
@@ -161,7 +161,7 @@ beta_error_df = do.call(rbind, lapply(results, function(x) x$beta_error)) %>%
   mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
 
-ggplot(beta_error_df %>%
+plot2 = ggplot(beta_error_df %>%
          filter(experiment == "n" & grepl("mv", method)) %>%
          mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
@@ -186,7 +186,7 @@ max_principal_angle_df = do.call(rbind, lapply(results, function(x) x$max_princi
   mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
 
-ggplot(max_principal_angle_df %>%
+plot3 = ggplot(max_principal_angle_df %>%
          filter(experiment == "n" & grepl("mv", method) & r == 1) %>%
          mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
@@ -224,3 +224,7 @@ ggplot(max_principal_angle_df %>%
   scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_3_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
+patchwork::wrap_plots(list(plot1, plot2, plot3), ncol = 1) +
+  patchwork::plot_layout(guides = "collect")
+
+ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 9, width = 8.5)
