@@ -178,7 +178,7 @@ plot2 = ggplot(beta_error_df %>%
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
-  scale_linetype_discrete(values = c("Multivariate" = 1, "Univariate" = 2))
+  scale_linetype_manual(values = c("Multivariate" = 1, "Univariate" = 2))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 3, width = 8.5)
 
 ### Max principal angle
@@ -204,7 +204,7 @@ plot3 = ggplot(max_principal_angle_df %>%
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
-  scale_linetype_discrete(values = c("Multivariate" = 1, "Univariate" = 2))
+  scale_linetype_manual(values = c("Multivariate" = 1, "Univariate" = 2))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_1_n.pdf"), height = 3, width = 8.5)
 
 ggplot(max_principal_angle_df %>%
