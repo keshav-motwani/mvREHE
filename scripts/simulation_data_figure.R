@@ -43,7 +43,7 @@ ggplot(time_df %>%
   xlab("n") +
   labs(color = "Method", linetype = "", y = "log10(seconds)") +
   theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside", plot.margin = unit(c(5 / 72.27, 2.5, 5 / 72.27, 2.5), "in"))
+  theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, width = 8.5)
 
 ### Squared error on diagonal
@@ -224,7 +224,10 @@ ggplot(max_principal_angle_df %>%
   scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_3_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
-patchwork::wrap_plots(list(plot1, plot2, plot3), ncol = 1) +
+design = "#A#
+          BBB
+          CCC"
+patchwork::wrap_plots(A = plot1, B = plot2, C = plot3, design = design) +
   patchwork::plot_layout(guides = "collect")
 
 ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 9, width = 8.5)
