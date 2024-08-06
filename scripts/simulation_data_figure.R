@@ -6,15 +6,16 @@ RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
-methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
+methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
+map = gsub("mv", "", methods)
+names(map) = methods
 
-palette = ggsci::pal_aaas("default")(length(methods))
-palette[4:3] = palette[3:4]
-names(palette) = methods
+palette = ggsci::pal_aaas("default")(3)
+names(palette) = c("HE", "REHE", "REML")
 options(ggplot2.discrete.colour = palette)
 
-Sigmas = c("data_10", "data_100", "data_1000")
-Sigma_labels = paste0("cond == ", unlist(lapply(strsplit(Sigmas, "_"), `[[`, 2)))
+Sigmas = "data_100" # c("data_1.01", "data_10", "data_100", "data_1000", "data_10000")
+Sigma_labels = "data" # paste0("cond == ", unlist(lapply(strsplit(Sigmas, "_"), `[[`, 2)))
 names(Sigma_labels) = Sigmas
 
 files = list.files(RESULT_PATH, full.names = TRUE)
@@ -31,17 +32,18 @@ time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
 
 ggplot(time_df %>%
          filter(experiment == "n") %>%
-         mutate(facet = Sigma_labels[Sigma]) %>%
-         mutate(facet = factor(facet, levels = Sigmas)),
-       aes(x = n, y = log10(mean), ymin = log10(mean - 1.96 * se), ymax = log10(mean + 1.96 * se), color = factor(gsub(".elapsed", "", method), levels = names(palette)), group = method)) +
+         mutate(facet = Sigma_labels[Sigma]),
+       aes(x = n, y = log10(mean), ymax = log10(mean + 1.96 * se), ymin = log10(mean - 1.96 * se),
+           color = factor(map[method], levels = names(palette)),
+           linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"))) +
   facet_wrap(~facet, scales = "fixed", nrow = 1) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = "log10(seconds)") +
+  labs(color = "Method", linetype = "", y = "log10(seconds)") +
   theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside")
+  theme(strip.background = element_blank(), strip.placement = "outside", plot.margin = unit(c(5 / 72.27, 2.5, 5 / 72.27, 2.5), "in"))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, width = 8.5)
 
 ### Squared error on diagonal
@@ -56,13 +58,13 @@ diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_square
   filter(method %in% methods)
 
 ggplot(diag_squared_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
+         filter(experiment == "n") %>%
          mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = Sigmas)) %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(na.rm = TRUE, diag_squared_error), se = sd(na.rm = TRUE, diag_squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(method, levels = names(palette)))) +
+           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
@@ -84,18 +86,21 @@ ggplot(h2_df %>%
          filter(experiment == "n") %>%
          mutate(facet = Sigma_labels[Sigma]),
        aes(x = n, y = sqrt(mean), ymin = sqrt(mean - 1.96 * se), ymax = sqrt(mean + 1.96 * se),
-           color = factor(method, levels = names(palette)), group = method)) +
+           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression(sqrt(E(hat(h)^2 - h^2)^2))) +
+  labs(color = "Method", linetype = "", y = expression("E||"*hat(h)^2 - h^2*"||"[2])) +
   theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside")
+  theme(strip.background = element_blank(), strip.placement = "outside", plot.margin = unit(c(5 / 72.27, 2.5, 5 / 72.27, 2.5), "in"))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
 
 ### Spectral error
+
+names(palette) = paste0("mv", names(palette))
+options(ggplot2.discrete.colour = palette)
 
 spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)) %>%
   mutate(estimate = label[as.character(estimate)]) %>%
@@ -118,7 +123,7 @@ ggplot(spectral_error_df %>%
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
-ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 3, width = 8.5)
 
 ### Squared error
 
@@ -169,7 +174,7 @@ ggplot(beta_error_df %>%
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
-ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 3, width = 8.5)
 
 ### Max principal angle
 
@@ -194,7 +199,7 @@ ggplot(max_principal_angle_df %>%
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
-ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_1_n.pdf"), height = 7.5 * 0.8, width = 8.5)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_1_n.pdf"), height = 3, width = 8.5)
 
 ggplot(max_principal_angle_df %>%
          filter(experiment == "n" & grepl("mv", method) & r == 3) %>%
