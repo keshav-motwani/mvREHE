@@ -153,6 +153,10 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_squared_error_n.pdf"), height 
 
 ### Regression coefficients error
 
+palette = ggsci::pal_aaas("default")(3)
+names(palette) = c("HE", "REHE", "REML")
+options(ggplot2.discrete.colour = palette)
+
 beta_error_df = do.call(rbind, lapply(results, function(x) x$beta_error)) %>%
   mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
