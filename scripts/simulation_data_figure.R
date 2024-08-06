@@ -177,7 +177,8 @@ plot2 = ggplot(beta_error_df %>%
   labs(color = "Method", linetype = "", y = expression("E||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA))
+  scale_y_continuous(limits = c(NA, NA)) +
+  scale_linetype_discrete(limits = c("Multivariate" = 1, "Univariate" = 2))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 3, width = 8.5)
 
 ### Max principal angle
@@ -202,7 +203,8 @@ plot3 = ggplot(max_principal_angle_df %>%
   labs(color = "Method", linetype = "", y = "Angle between true and estimated\nloading vector of PC 1", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA))
+  scale_y_continuous(limits = c(NA, NA)) +
+  scale_linetype_discrete(limits = c("Multivariate" = 1, "Univariate" = 2))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_1_n.pdf"), height = 3, width = 8.5)
 
 ggplot(max_principal_angle_df %>%
@@ -228,6 +230,7 @@ design = "#AA#
           BBBB
           CCCC"
 patchwork::wrap_plots(A = plot1, B = plot2, C = plot3, design = design) +
-  patchwork::plot_layout(guides = "collect")
+  patchwork::plot_layout(guides = "collect") &
+  theme(legend.position='bottom')
 
 ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 9, width = 8.5)
