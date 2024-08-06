@@ -164,13 +164,13 @@ ggplot(beta_error_df %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(na.rm = TRUE, beta_error), se = sd(na.rm = TRUE, beta_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(method, levels = names(palette)))) +
+           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression("E||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
+  labs(color = "Method", linetype = "", y = expression("E||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
@@ -189,13 +189,13 @@ ggplot(max_principal_angle_df %>%
          group_by(n, facet, method) %>%
          summarize(mean = mean(na.rm = TRUE, value), se = sd(na.rm = TRUE, value) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(method, levels = names(palette)))) +
+           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = "Principal angle - 1 PC", x = "n") +
+  labs(color = "Method", linetype = "", y = "Angle between true and estimated\nloading vector of PC 1", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
