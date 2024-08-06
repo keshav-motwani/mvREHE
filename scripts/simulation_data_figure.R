@@ -178,7 +178,7 @@ plot2 = ggplot(beta_error_df %>%
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
-  scale_linetype_manual(values = c("Multivariate" = 1, "Univariate" = 2))
+  guides(linetype="none", color = "none")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 3, width = 8.5)
 
 ### Max principal angle
@@ -204,7 +204,7 @@ plot3 = ggplot(max_principal_angle_df %>%
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
-  scale_linetype_manual(values = c("Multivariate" = 1, "Univariate" = 2))
+  guides(linetype="none", color = "none")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_1_n.pdf"), height = 3, width = 8.5)
 
 ggplot(max_principal_angle_df %>%
@@ -226,9 +226,9 @@ ggplot(max_principal_angle_df %>%
   scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_3_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
-design = "#AA#
-          BBBB
-          CCCC"
+design = "#AA##
+          BBBBB
+          CCCCC"
 patchwork::wrap_plots(A = plot1, B = plot2, C = plot3, design = design) +
   patchwork::plot_layout(guides = "collect") &
   theme(legend.position='bottom')
