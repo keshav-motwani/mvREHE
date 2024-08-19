@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --constraint=amd
-#SBATCH --array=1-540
+#SBATCH --array=1-360
 #SBATCH --mail-user=keshav.motwani@ufl.edu
 #SBATCH --mail-type=END
 #SBATCH --account=amolstad
@@ -23,4 +23,5 @@ END_NUM=$(( $SLURM_ARRAY_TASK_ID * $PER_TASK ))
 for (( PARAMETER_ID=$START_NUM; PARAMETER_ID<=END_NUM; PARAMETER_ID++ )); do
   timeout 3h Rscript --vanilla scripts/simulation_runner.R 2 $PARAMETER_ID
 done
+
 

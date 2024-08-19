@@ -70,7 +70,7 @@ ggplot(diag_squared_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression("E||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +   theme(legend.position = "bottom") +
+  labs(color = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_diag_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
@@ -92,7 +92,7 @@ plot1 = ggplot(h2_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = expression("E||"*hat(h)^2 - h^2*"||"[2])) +
+  labs(color = "Method", linetype = "", y = expression("||"*hat(h)^2 - h^2*"||"[2])) +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
@@ -119,7 +119,7 @@ ggplot(spectral_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
+  labs(color = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
@@ -144,7 +144,7 @@ ggplot(squared_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
+  labs(color = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
@@ -174,7 +174,7 @@ plot2 = ggplot(beta_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = expression("E||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
+  labs(color = "Method", linetype = "", y = expression("||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
@@ -200,7 +200,7 @@ plot3 = ggplot(max_principal_angle_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = "Angle between true and estimated\nloading vector of PC 1", x = "n") +
+  labs(color = "Method", linetype = "", y = "Angle between truth and\nestimated disentangled PC 1", x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
@@ -229,7 +229,7 @@ ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_3_n.pdf"),
 design = "#AA##
           BBBBB
           CCCCC"
-patchwork::wrap_plots(A = plot1, B = plot2, C = plot3, design = design) +
+patchwork::wrap_plots(A = plot1, B = plot3, C = plot2, design = design) +
   patchwork::plot_layout(guides = "collect") &
   theme(legend.position='bottom')
 

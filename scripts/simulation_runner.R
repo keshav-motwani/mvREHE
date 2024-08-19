@@ -300,7 +300,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
 
   } else {
 
-    outcome = 9
+    outcome = 24
     covariates = 92:182
 
     Sigma_hat = fit$Sigma_hat
@@ -352,7 +352,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate) {
   Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
 
   if (id == "lowdim-t") {
-    df = 5
+    df = 3
     blocks = extract_blocks(D_2)
     Epsilon = make_t_distributed(Epsilon, blocks, df)
     Gamma_1 = make_t_distributed(Gamma_1, blocks, df)
@@ -483,7 +483,7 @@ if (grepl("lowdim", SIMULATION_ID)) { # 5000
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 } else if (SIMULATION_ID == "data") { # 3000
   methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
-  Sigmas = c("data_1.01", "data_10", "data_100", "data_1000", "data_10000")
+  Sigmas = "data_100" # c("data_1.01", "data_10", "data_100", "data_1000", "data_10000")
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = NA
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")

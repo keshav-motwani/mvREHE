@@ -1,7 +1,7 @@
 library(tidyverse)
 
-SIMULATION_ID = "lowdim1"
-COMPONENTS = as.numeric(commandArgs(trailingOnly=TRUE)[1])
+SIMULATION_ID = commandArgs(trailingOnly=TRUE)[1]
+COMPONENTS = as.numeric(commandArgs(trailingOnly=TRUE)[2])
 RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
@@ -90,7 +90,7 @@ ggplot(h2_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", linetype = "", y = expression("E||"*hat(h)^2 - h^2*"||"[2])) +
+  labs(color = "Method", linetype = "", y = expression("||"*hat(h)^2 - h^2*"||"[2])) +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside")
 ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
@@ -117,7 +117,7 @@ ggplot(spectral_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
+  labs(color = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
@@ -142,7 +142,7 @@ ggplot(squared_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression("E||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
+  labs(color = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
@@ -167,7 +167,7 @@ ggplot(beta_error_df %>%
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
-  labs(color = "Method", y = expression("E||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
+  labs(color = "Method", y = expression("||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
