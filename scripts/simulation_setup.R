@@ -300,7 +300,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
 
   } else {
 
-    outcome = 24
+    outcome = 25
     covariates = 92:182
 
     Sigma_hat = fit$Sigma_hat

@@ -22,24 +22,28 @@ from_conn_to_vec = function(conn)
   as.vector(conn[lower.tri(conn, diag = TRUE)])
 }
 
-from_vec_to_conn = function(vec_conn)
+from_vec_to_conn = function(vec_conn, upper_triangle = FALSE)
 {
   p = round(uniroot(function(x) x^2 + x - 2 * length(vec_conn), interval = c(0, 500))$root)
   conn = matrix(NA, nrow = p, ncol = p)
   conn[lower.tri(conn, diag = TRUE)] = vec_conn # Lower triangle
-  t_conn = t(conn)
-  t_conn[lower.tri(t_conn, diag = TRUE)] = vec_conn # Upper triangle
-  t(t_conn)
+  if (upper_triangle) {
+    t_conn = t(conn)
+    t_conn[lower.tri(t_conn, diag = TRUE)] = vec_conn # Upper triangle
+    t(t_conn)
+  } else {
+    conn
+  }
 }
 
 # Plot rotated PC modes of variation
-plot_connectome_vec = function(connectome_vec, title, groups, community = FALSE, breaks = NULL, colors = NULL, legend = FALSE) {
+plot_connectome_vec = function(connectome_vec, title, groups, community = FALSE, breaks = NULL, colors = NULL, legend = FALSE, upper_triangle = FALSE) {
   if (length(connectome_vec) == 0) {
     return(NA)
   }
-  connectome = from_vec_to_conn(connectome_vec)
+  connectome = from_vec_to_conn(connectome_vec, upper_triangle)
   if (is.null(breaks)) {
-    breaks = sort(c(-quantile(abs(connectome), 0.99), 0, quantile(abs(connectome), 0.99)))
+    breaks = sort(c(-quantile(abs(connectome), 0.99, na.rm = TRUE), 0, quantile(abs(connectome), 0.99, na.rm = TRUE)))
     colors = c("blue", "white", "red")
   }
   if (community) {
@@ -317,7 +321,7 @@ P_community = t(sapply(unique(groups), FUN = function(x) as.numeric(groups == x)
 fun_connectomes = lapply(fun_connectomes, function(x) {
   connectome = P_community %*% x %*% t(P_community)
   rownames(connectome) = colnames(connectome) = unique(groups)
-  connectome
+  connectome[sort(rownames(connectome)), sort(rownames(connectome))]
 })
 
 groups = colnames(str_connectomes[[1]])
@@ -326,6 +330,7 @@ str_connectomes = lapply(str_connectomes, function(x) {
   connectome = P_community %*% x %*% t(P_community)
   rownames(connectome) = colnames(connectome) = unique(groups)
   connectome
+  connectome[sort(rownames(connectome)), sort(rownames(connectome))]
 })
 
 Y_fun = sapply(fun_connectomes, from_conn_to_vec) %>% t
@@ -416,7 +421,7 @@ prop_explained = do.call(rbind, list(
   data.frame(component = "Unique Env", prop = cumsum(eigen(cor_unique_env, symmetric = TRUE)$val) / sum(eigen(cor_unique_env, symmetric = TRUE)$val), index = 1:ncol(cor_Y))
 ))
 prop_explained$component = factor(prop_explained$component, levels = c("Genetic", "Common Env", "Unique Env", "Observed"))
-community = TRUE
+community = FALSE
 
 ggplot(prop_explained, aes(x = index, y = prop, color = component)) + geom_point(size = 0.5) + theme_bw() + labs(x = "Principal Modes", y = "Proportion of Variation Explained", color = "Component") + ylim(0, 1)
 ggsave(file.path(RESULT_PATH, "pc_prop_explained.pdf"), height = 3, width = 6)
@@ -425,11 +430,11 @@ h2_mvREHE[is.na(h2_mvREHE)] = 0
 h2_REML = diag(Sigma_hat_REML[[genetic_component]]) / (diag(Sigma_hat_REML[[genetic_component]]) + diag(Sigma_hat_REML[[common_env_component]]) + diag(Sigma_hat_REML[[unique_env_component]]))
 h2_REML[is.na(h2_REML)] = 0
 
-str_groups[order(colSums(from_vec_to_conn(h2_mvREHE[str_indices])), decreasing = TRUE)]
-fun_groups[order(colSums(from_vec_to_conn(h2_mvREHE[fun_indices])), decreasing = TRUE)]
+str_groups[order(colSums(from_vec_to_conn(h2_mvREHE[str_indices], upper_triangle = TRUE)), decreasing = TRUE)]
+fun_groups[order(colSums(from_vec_to_conn(h2_mvREHE[fun_indices], upper_triangle = TRUE)), decreasing = TRUE)]
 max(h2_mvREHE)
 max(h2_REML)
-fun_h2 = from_vec_to_conn(h2_mvREHE[fun_indices])
+fun_h2 = from_vec_to_conn(h2_mvREHE[fun_indices], upper_triangle = TRUE)
 diag(fun_h2) = 0
 fun_groups[which(fun_h2 == max(fun_h2), arr.ind = TRUE)[1, ]]
 
@@ -448,8 +453,8 @@ h2_plot = ggplot(h2, aes(x = REML, y = mvREHE, color = ifelse(1:nrow(h2) %in% st
   theme(legend.position = "top", text=element_text(size=7))
 
 figure = list()
-figure[[2]] = plot_connectome_vec(h2_mvREHE[fun_indices], expression(hat(h)[j]^2~"- Functional"), groups = fun_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), legend = TRUE)
-figure[[1]] = plot_connectome_vec(h2_mvREHE[str_indices], expression(hat(h)[j]^2~"- Structural"), groups = str_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"))
+figure[[2]] = plot_connectome_vec(h2_mvREHE[fun_indices], expression(hat(h)[j]^2~"- Functional"), groups = fun_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), legend = TRUE, upper_triangle = TRUE)
+figure[[1]] = plot_connectome_vec(h2_mvREHE[str_indices], expression(hat(h)[j]^2~"- Structural"), groups = str_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), upper_triangle = TRUE)
 figure[[3]] = h2_plot
 pdf(file.path(RESULT_PATH, "heritability.pdf"), height = 2.6, width = 8)
 print(cowplot::plot_grid(plotlist = figure, ncol = 3, byrow = TRUE, rel_widths = c(0.3, 0.36, 0.36)))
@@ -513,20 +518,20 @@ connection_names[order(beta_components[[genetic_component]][, outcome], decreasi
 max_color = max(abs(unlist(c(lapply(beta_components, function(b) b[, outcome]), list(beta_raw[, outcome])))))
 
 figure = list()
-figure[[1]] = plot_connectome_vec(beta_raw[, outcome], bquote("Observed Data ("~R^2 == .(round(r2_raw[outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
-figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]][, outcome], bquote("Genetic Pathway ("~R^2 == .(round(r2_components[[genetic_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
-figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]][, outcome], bquote("Common Env Pathway ("~R^2 == .(round(r2_components[[common_env_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
-figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]][, outcome], bquote("Unique Env Pathway ("~R^2 == .(round(r2_components[[unique_env_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"))
+figure[[1]] = plot_connectome_vec(beta_raw[, outcome], bquote("Observed Data ("~R^2 == .(round(r2_raw[outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"), upper_triangle = FALSE)
+figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]][, outcome], bquote("Genetic Pathway ("~R^2 == .(round(r2_components[[genetic_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"), upper_triangle = FALSE)
+figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]][, outcome], bquote("Common Env Pathway ("~R^2 == .(round(r2_components[[common_env_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"), upper_triangle = FALSE)
+figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]][, outcome], bquote("Unique Env Pathway ("~R^2 == .(round(r2_components[[unique_env_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"), upper_triangle = FALSE)
 
 pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.6, width = 10)
 print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
 dev.off()
 
 figure = list()
-figure[[1]] = plot_connectome_vec(r2_raw, bquote("Observed Data"~R^2~"(Min" == .(round(min(r2_raw), 2))~", Max" == .(round(max(r2_raw), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"))
-figure[[2]] = plot_connectome_vec(r2_components[[genetic_component]], bquote("Genetic Pathway"~R^2~"(Min" == .(round(min(r2_components[[genetic_component]]), 2))~", Max" == .(round(max(r2_components[[genetic_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"))
-figure[[3]] = plot_connectome_vec(r2_components[[common_env_component]], bquote("Common Env Pathway"~R^2~"(Min" == .(round(min(r2_components[[common_env_component]]), 2))~", Max" == .(round(max(r2_components[[common_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"))
-figure[[4]] = plot_connectome_vec(r2_components[[unique_env_component]], bquote("Unique Env Pathway"~R^2~"(Min" == .(round(min(r2_components[[unique_env_component]]), 2))~", Max" == .(round(max(r2_components[[unique_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"))
+figure[[1]] = plot_connectome_vec(r2_raw, bquote("Observed Data"~R^2~"(Min" == .(round(min(r2_raw), 2))~", Max" == .(round(max(r2_raw), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[2]] = plot_connectome_vec(r2_components[[genetic_component]], bquote("Genetic Pathway"~R^2~"(Min" == .(round(min(r2_components[[genetic_component]]), 2))~", Max" == .(round(max(r2_components[[genetic_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[3]] = plot_connectome_vec(r2_components[[common_env_component]], bquote("Common Env Pathway"~R^2~"(Min" == .(round(min(r2_components[[common_env_component]]), 2))~", Max" == .(round(max(r2_components[[common_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[4]] = plot_connectome_vec(r2_components[[unique_env_component]], bquote("Unique Env Pathway"~R^2~"(Min" == .(round(min(r2_components[[unique_env_component]]), 2))~", Max" == .(round(max(r2_components[[unique_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
 
 pdf(file.path(RESULT_PATH, "r2.pdf"), height = 2.6, width = 10)
 print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
