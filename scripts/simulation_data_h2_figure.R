@@ -54,6 +54,7 @@ both = ggplot(result, aes(x = REML, y = mvREHE, color = type)) +
   labs(color = "Connection Type")
 
 patchwork::wrap_plots(list(both, REML, mvREHE)) +
+  patchwork::plot_annotation(tag_levels = "a")+
   patchwork::plot_layout(guides = 'collect') &
   theme(legend.position='bottom')
 

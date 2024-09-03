@@ -440,7 +440,7 @@ fun_groups[which(fun_h2 == max(fun_h2), arr.ind = TRUE)[1, ]]
 
 h2 = data.frame(REML = h2_REML, mvREHE = h2_mvREHE)
 library(ggplot2)
-h2_plot = ggplot(h2, aes(x = REML, y = mvREHE, color = ifelse(1:nrow(h2) %in% str_indices, "Structural", "Functional"))) +
+h2_plot = ggplot(h2, aes(x = REML, y = mvREHE, color = factor(ifelse(1:nrow(h2) %in% str_indices, "Structural", "Functional"), levels = c("Structural", "Functional")))) +
   geom_point(size = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   theme_bw() +
@@ -450,29 +450,33 @@ h2_plot = ggplot(h2, aes(x = REML, y = mvREHE, color = ifelse(1:nrow(h2) %in% st
   ylab(expression(hat(h)[j]^2~"from mvREHE")) +
   xlab(expression(hat(h)[j]^2~"from REML")) +
   labs(color = "Connection Type") +
-  theme(legend.position = "top", text=element_text(size=7))
+  theme(legend.position = "top", legend.title = element_text(size = 8), legend.text = element_text(size = 7), axis.title = element_text(size = 8)) +
+  theme(legend.margin=margin(t = -0.7, unit='cm')) +
+  guides(color = guide_legend(ncol = 1))
 
 figure = list()
-figure[[2]] = plot_connectome_vec(h2_mvREHE[fun_indices], expression(hat(h)[j]^2~"- Functional"), groups = fun_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), legend = TRUE, upper_triangle = TRUE)
-figure[[1]] = plot_connectome_vec(h2_mvREHE[str_indices], expression(hat(h)[j]^2~"- Structural"), groups = str_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[2]] = plot_connectome_vec(h2_mvREHE[fun_indices], expression(hat(h)^2~"- Functional"), groups = fun_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), legend = TRUE, upper_triangle = TRUE)
+figure[[1]] = plot_connectome_vec(h2_mvREHE[str_indices], expression(hat(h)^2~"- Structural"), groups = str_groups, community = community, breaks = c(0, 0.25), colors = c("white", "red"), upper_triangle = TRUE)
 figure[[3]] = h2_plot
 pdf(file.path(RESULT_PATH, "heritability.pdf"), height = 2.6, width = 8)
-print(cowplot::plot_grid(plotlist = figure, ncol = 3, byrow = TRUE, rel_widths = c(0.3, 0.36, 0.36)))
+patchwork::wrap_plots(figure, widths = c(0.3, 0.36, 0.36)) +
+  patchwork::plot_annotation(tag_levels = list(c("a", "", "b")))
 dev.off()
 
 figure = list()
-figure[[4]] = plot_connectome_vec(vv_gen[fun_indices, 1], "Genetic Component PC 1 - Functional", groups = fun_groups, community = community)
-figure[[3]] = plot_connectome_vec(vv_gen[str_indices, 1], "Genetic Component PC 1 - Structural", groups = str_groups, community = community)
+figure[[6]] = plot_connectome_vec(vv_gen[fun_indices, 1], "Genetic Component PC 1 - Functional", groups = fun_groups, community = community)
+figure[[5]] = plot_connectome_vec(vv_gen[str_indices, 1], "Genetic Component PC 1 - Structural", groups = str_groups, community = community)
 figure[[2]] = plot_connectome_vec(vv_raw[fun_indices, 1], "Observed Data PC 1 - Functional", groups = fun_groups, community = community)
 figure[[1]] = plot_connectome_vec(vv_raw[str_indices, 1], "Observed Data PC 1 - Structural", groups = str_groups, community = community)
 figure[[8]] = plot_connectome_vec(vv_gen[fun_indices, 2], "Genetic Component PC 2 - Functional", groups = fun_groups, community = community)
 figure[[7]] = plot_connectome_vec(vv_gen[str_indices, 2], "Genetic Component PC 2 - Structural", groups = str_groups, community = community)
-figure[[6]] = plot_connectome_vec(vv_raw[fun_indices, 2], "Observed Data PC 2 - Functional", groups = fun_groups, community = community)
-figure[[5]] = plot_connectome_vec(vv_raw[str_indices, 2], "Observed Data PC 2 - Structural", groups = str_groups, community = community)
+figure[[4]] = plot_connectome_vec(vv_raw[fun_indices, 2], "Observed Data PC 2 - Functional", groups = fun_groups, community = community)
+figure[[3]] = plot_connectome_vec(vv_raw[str_indices, 2], "Observed Data PC 2 - Structural", groups = str_groups, community = community)
 figure = figure[!sapply(figure, function(x) is.na(x)[1])]
 
 pdf(file.path(RESULT_PATH, "pc_loadings_new.pdf"), height = 5.3, width = 10)
-print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
+patchwork::wrap_plots(figure, ncol = 4, byrow = TRUE) +
+  patchwork::plot_annotation(tag_levels = list(c("a", "", "b", "", "c", "", "d", "")))
 dev.off()
 
 cv_lambda = cv_component_ridge_regression(Y, D_list, Sigma_hat, fun_indices, str_indices, mvREHE)
@@ -523,18 +527,20 @@ figure[[2]] = plot_connectome_vec(beta_components[[genetic_component]][, outcome
 figure[[3]] = plot_connectome_vec(beta_components[[common_env_component]][, outcome], bquote("Common Env Pathway ("~R^2 == .(round(r2_components[[common_env_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"), upper_triangle = FALSE)
 figure[[4]] = plot_connectome_vec(beta_components[[unique_env_component]][, outcome], bquote("Unique Env Pathway ("~R^2 == .(round(r2_components[[unique_env_component]][outcome], 2))~")"), groups = str_groups, community = community, breaks = c(-max_color, 0, max_color), colors = c("blue", "white", "red"), upper_triangle = FALSE)
 
-pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.6, width = 10)
-print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
+pdf(file.path(RESULT_PATH, "regression_coefficients_new.pdf"), height = 2.9, width = 10)
+patchwork::wrap_plots(figure, ncol = 4, byrow = TRUE) +
+  patchwork::plot_annotation(tag_levels = list(c("a", "b", "c", "d")))
 dev.off()
 
 figure = list()
-figure[[1]] = plot_connectome_vec(r2_raw, bquote("Observed Data"~R^2~"(Min" == .(round(min(r2_raw), 2))~", Max" == .(round(max(r2_raw), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
-figure[[2]] = plot_connectome_vec(r2_components[[genetic_component]], bquote("Genetic Pathway"~R^2~"(Min" == .(round(min(r2_components[[genetic_component]]), 2))~", Max" == .(round(max(r2_components[[genetic_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
-figure[[3]] = plot_connectome_vec(r2_components[[common_env_component]], bquote("Common Env Pathway"~R^2~"(Min" == .(round(min(r2_components[[common_env_component]]), 2))~", Max" == .(round(max(r2_components[[common_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
-figure[[4]] = plot_connectome_vec(r2_components[[unique_env_component]], bquote("Unique Env Pathway"~R^2~"(Min" == .(round(min(r2_components[[unique_env_component]]), 2))~", Max" == .(round(max(r2_components[[unique_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[1]] = plot_connectome_vec(r2_raw, bquote("Observed"~R^2~"\n(Min" == .(round(min(r2_raw), 2))~", Max" == .(round(max(r2_raw), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[2]] = plot_connectome_vec(r2_components[[genetic_component]], bquote("Genetic"~R^2~"\n(Min" == .(round(min(r2_components[[genetic_component]]), 2))~", Max" == .(round(max(r2_components[[genetic_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[3]] = plot_connectome_vec(r2_components[[common_env_component]], bquote("Common Env"~R^2~"\n(Min" == .(round(min(r2_components[[common_env_component]]), 2))~", Max" == .(round(max(r2_components[[common_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[4]] = plot_connectome_vec(r2_components[[unique_env_component]], bquote("Unique Env"~R^2~"\n(Min" == .(round(min(r2_components[[unique_env_component]]), 2))~", Max" == .(round(max(r2_components[[unique_env_component]]), 2))~")"), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
 
-pdf(file.path(RESULT_PATH, "r2.pdf"), height = 2.6, width = 10)
-print(cowplot::plot_grid(plotlist = figure, ncol = 4, byrow = TRUE))
+pdf(file.path(RESULT_PATH, "r2.pdf"), height = 2.9, width = 10)
+patchwork::wrap_plots(figure, ncol = 4, byrow = TRUE) +
+  patchwork::plot_annotation(tag_levels = list(c("a", "b", "c", "d")))
 dev.off()
 
 connection_names[order(r2_components[[genetic_component]], decreasing = TRUE)]
