@@ -9,8 +9,9 @@ dir.create(RESULT_PATH, recursive = TRUE)
 
 replicates = 1:50
 
-if (SIMULATION_ID == "lowdim1") { # 5000
+if (SIMULATION_ID == "lowdim1") { # 5000 or 5900 with GEMMA
   methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
+  if (COMPONENTS == 2) methods = c(methods, "GEMMA")
   Sigmas = "uniform"
   ns = c(250, 500, 1000, 2000, 4000, 8000)
   qs = c(5, 10, 20)
@@ -34,14 +35,6 @@ if (SIMULATION_ID == "lowdim1") { # 5000
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = NA
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
-} if (SIMULATION_ID == "lowdim2") { # 5000
-  methods = c("mvHE", "mvREHE", "mvREML", "GEMMA", "HE", "REHE", "REML")
-  COMPONENTS = 2
-  Sigmas = "uniform"
-  ns = c(250, 500, 1000, 2000, 4000, 8000)
-  qs = c(5, 10, 20)
-  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
-  grid = grid[grid$method != "mvREML" | (grid$method == "mvREML" & grid$q == 5) | (grid$method == "mvREML" & grid$q == 10 & grid$n <= 2000), ]
 }
 
 PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[3])
