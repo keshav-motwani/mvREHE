@@ -6,10 +6,9 @@ RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
-methods = c("mvHE", "mvREHE", "mvREML", "mvREML_DR5", "HE", "REHE", "REML")
-palette = ggsci::pal_aaas("default")(3)
-names(palette) = c("HE", "REHE", "REML")
-options(ggplot2.discrete.colour = palette)
+methods = c("mvHE", "mvREHE", "mvREML", "GEMMA", "mvREML_DR5", "HE", "REHE", "REML")
+palette = ggsci::pal_aaas("default")(4)
+names(palette) = c("HE", "REHE", "REML", "GEMMA")
 map = gsub("mv", "", methods)
 map = gsub("_DR5", "", map)
 names(map) = methods
@@ -18,7 +17,7 @@ files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]
 
 results = lapply(files, readRDS)
-
+palette1 = palette
 ### Time
 
 time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
@@ -26,20 +25,22 @@ time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
   summarize(mean = mean(na.rm = TRUE, time), se = sd(na.rm = TRUE, time) / sqrt(n())) %>%
   filter(method %in% methods)
 
-ggplot(time_df %>%
+time = ggplot(time_df %>%
          filter(experiment == "n") %>%
          mutate(facet = paste0("q = ", q)) %>%
          mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))),
-       aes(x = n, y = log10(mean), ymin = log10(mean - 1.96 * se), ymax = log10(mean + 1.96 * se), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+       aes(x = n, y = log10(mean), ymin = log10(mean - 1.96 * se), ymax = log10(mean + 1.96 * se), color = factor(map[gsub(".elapsed", "", method)], levels = names(palette1)), linetype = ifelse(grepl("mv|GEMMA", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "fixed", nrow = 1) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
   labs(color = "Method", linetype = "", y = "log10(seconds)") +
-  theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), height = 3, width = 8.5)
+  theme(legend.position = "none") +
+  theme(strip.background = element_blank(), strip.placement = "outside") +
+  scale_color_manual(values = palette1) +
+  xlab(NULL)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_time_n.pdf"), time, height = 7.5 * 0.8, width = 8.5)
 
 ### Squared error on diagonal
 
@@ -60,7 +61,7 @@ ggplot(diag_squared_error_df %>%
          summarize(mean = mean(na.rm = TRUE, diag_squared_error), se = sd(na.rm = TRUE, diag_squared_error) / sqrt(n())),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
            color = factor(map[method], levels = names(palette)),
-           linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"))) +
+           linetype = ifelse(grepl("mv|GEMMA", method), "Multivariate", "Univariate"))) +
   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
@@ -79,12 +80,12 @@ h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
   summarize(mean = mean(na.rm = TRUE, h2_error), se = sd(na.rm = TRUE, h2_error) / sqrt(n())) %>%
   filter(method %in% methods)
 
-ggplot(h2_df %>%
+h2_error = ggplot(h2_df %>%
          filter(experiment == "n") %>%
          mutate(facet = paste0("q = ", q)) %>%
          mutate(facet = factor(facet, levels = gtools::mixedsort(unique(facet)))),
        aes(x = n, y = sqrt(mean), ymin = sqrt(mean - 1.96 * se), ymax = sqrt(mean + 1.96 * se),
-           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
+           color = factor(map[method], levels = names(palette1)), linetype = ifelse(grepl("mv|GEMMA", method), "Multivariate", "Univariate"), group = method)) +
   facet_wrap(~facet, scales = "free_y", nrow = 1) +
   geom_line() +
   geom_errorbar(width = 0.1) +
@@ -92,20 +93,21 @@ ggplot(h2_df %>%
   xlab("n") +
   labs(color = "Method", linetype = "", y = expression("||"*hat(h)^2 - h^2*"||"[2])) +
   theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside")
-ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), height = 3, width = 8.5)
+  theme(strip.background = element_blank(), strip.placement = "outside") +
+  scale_color_manual(values = palette1)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_error_n.pdf"), h2_error, height = 7.5 * 0.8, width = 8.5)
 
 ### Spectral error
 
 names(palette) = paste0("mv", names(palette))
-options(ggplot2.discrete.colour = palette)
+names(palette)[4] = "GEMMA"
 
 spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)) %>%
   mutate(estimate = label[as.character(estimate)]) %>%
   filter(method %in% methods)
 
 ggplot(spectral_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
+         filter(experiment == "n" & grepl("mv|GEMMA", method)) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
@@ -120,8 +122,30 @@ ggplot(spectral_error_df %>%
   labs(color = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
   theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA))
+  scale_y_continuous(limits = c(NA, NA)) +
+  scale_color_manual(values = palette)
 ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
+
+
+spectral_error = ggplot(spectral_error_df %>%
+         filter(experiment == "n" & grepl("mv|GEMMA", method), estimate == label[1]) %>%
+         mutate(facet = paste0("q == ", q)) %>%
+         mutate(facet = factor(facet, levels = c("q == 5", "q == 10", "q == 20"))) %>%
+         group_by(n, facet, method) %>%
+         summarize(mean = mean(na.rm = TRUE, spectral_error), se = sd(na.rm = TRUE, spectral_error) / sqrt(n())),
+       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
+           color = factor(method, levels = names(palette)))) +
+  facet_wrap(~facet, scales = "free_y", ncol = 3, dir = "h", labeller = labeller(facet = label_parsed)) +
+  geom_line() +
+  geom_errorbar(width = 0.1) +
+  theme_bw() +
+  xlab(NULL) +
+  labs(color = "Method", y = expression("||"*hat(Sigma)[G] - Sigma[G]*"||"[2])) +
+  theme(legend.position = "none") +
+  theme(strip.background = element_blank(), strip.placement = "outside") +
+  scale_y_continuous(limits = c(NA, NA)) +
+  scale_color_manual(values = palette)
+
 
 ### Squared error
 
@@ -130,7 +154,7 @@ squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) 
   filter(method %in% methods)
 
 ggplot(squared_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
+         filter(experiment == "n" & grepl("mv|GEMMA", method)) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
@@ -155,7 +179,7 @@ beta_error_df = do.call(rbind, lapply(results, function(x) x$beta_error)) %>%
   filter(method %in% methods)
 
 ggplot(beta_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
+         filter(experiment == "n" & grepl("mv|GEMMA", method)) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
@@ -180,7 +204,7 @@ max_principal_angle_df = do.call(rbind, lapply(results, function(x) x$max_princi
   filter(method %in% methods)
 
 ggplot(max_principal_angle_df %>%
-         filter(experiment == "n" & grepl("mv", method) & r == 1) %>%
+         filter(experiment == "n" & grepl("mv|GEMMA", method) & r == 1) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
@@ -199,7 +223,7 @@ ggplot(max_principal_angle_df %>%
 ggsave(file.path(FIGURES_PATH, "simulation_figure_principal_angle_1_n.pdf"), height = 7.5 * 0.8, width = 8.5)
 
 ggplot(max_principal_angle_df %>%
-         filter(experiment == "n" & grepl("mv", method) & r == 3) %>%
+         filter(experiment == "n" & grepl("mv|GEMMA", method) & r == 3) %>%
          mutate(facet = paste0("q == ", q, "~(", estimate, ")")) %>%
          mutate(facet = factor(facet, levels = facets)) %>%
          group_by(n, facet, method) %>%
@@ -216,3 +240,7 @@ ggplot(max_principal_angle_df %>%
   theme(strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA))
 ggsave(file.path(FIGURES_PATH, "simulation_figure_principal_angle_3_n.pdf"), height = 7.5 * 0.8, width = 8.5)
+
+patchwork::wrap_plots(list(time, spectral_error, h2_error), ncol = 1) +
+  patchwork::plot_annotation(tag_levels = list(c("a", "b", "c")))
+ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 7.5 * 0.8, width = 8.5)

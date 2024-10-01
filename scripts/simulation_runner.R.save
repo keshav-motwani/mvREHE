@@ -128,15 +128,21 @@ hcp_kinship = function(n) {
 
 }
 
-extract_blocks = function(mat) {
-  g = igraph::graph.adjacency(mat, weighted = TRUE)
-  groups = unique(lapply(Map(sort, igraph::neighborhood(g, nrow(mat))), as.numeric))
-  return(groups)
-}
+univariate = function(Y, D_list, method_fn) {
 
-make_t_distributed = function(mat, blocks, df) {
+  q = ncol(Y)
 
-  diag(rep(sqrt(df / rchisq(length(blocks), df)), lengths(blocks))) %*% mat * sqrt((df - 2) / df)
+  estimates = apply(Y, 2, FUN = method_fn, D_list = D_list, simplify = FALSE)
+
+  Sigma_hat = lapply(1:length(D_list), function(i) matrix(0, q, q))
+
+  for (j in 1:q) {
+    for (k in 1:length(D_list)) {
+      Sigma_hat[[k]][j, j] = estimates[[j]]$Sigma_hat[[k]][1, 1]
+    }
+  }
+
+  return(list(Sigma_hat = Sigma_hat))
 
 }
 
@@ -164,28 +170,22 @@ smooth_cov = function(cov, diag = FALSE, output_size = 1000) {
 
 }
 
-h2_error = function(Sigma_list_estimate, Sigma_list_truth) {
+var_prop = function(Sigma_list) {
 
-  h2_estimate = sapply(1:ncol(Sigma_list_estimate[[1]]), function(j) Sigma_list_estimate[[2]][j, j] / sum(sapply(Sigma_list_estimate, function(Sigma) Sigma[j, j])))
-  h2_truth = sapply(1:ncol(Sigma_list_truth[[1]]), function(j) Sigma_list_truth[[2]][j, j] / sum(sapply(Sigma_list_estimate, function(Sigma) Sigma[j, j])))
-
-  sqrt(sum((h2_estimate - h2_truth)^2))
+  sapply(Sigma_list, function(x) sum(diag(x))) / sum(sapply(Sigma_list, function(x) sum(diag(x))))
 
 }
 
 max_principal_angle = function(cov_estimate, cov_truth, r) {
 
-  if (!is.null(cov_estimate) & !is.null(cov_truth) & !any(is.na(cov_estimate))) {
+  if (!is.null(cov_estimate) & !is.null(cov_truth)) {
 
     if (ncol(cov_truth) > ncol(cov_estimate)) {
-      cov_estimate = expand_estimate(cov_estimate, ncol(cov_truth))
+      cov_estimate = expand_cov_estimate(cov_estimate, ncol(cov_truth))
     }
 
-    cor_estimate = cov2cor(cov_estimate)
-    cor_estimate[is.na(cor_estimate)] = 0
-
-    X = eigen(cor_estimate)$vectors[, 1:r, drop = FALSE]
-    Y = eigen(cov2cor(cov_truth))$vectors[, 1:r, drop = FALSE]
+    X = eigen(cov_estimate)$vectors[, 1:r, drop = FALSE]
+    Y = eigen(cov_truth)$vectors[, 1:r, drop = FALSE]
 
     pracma::subspace(X, Y) * 180 / pi
 
@@ -206,7 +206,7 @@ beta_error = function(cov_estimate, cov_truth, Y, D_list, component, covariates,
   cor_estimate = cov2cor(cov_estimate)
   cor_estimate[is.na(cor_estimate)] = 0
   max_eigenvalue = max(eigen(cor_estimate)$values)
-  lambda_seq = 10^seq(log10(max_eigenvalue / 1000), log10(max_eigenvalue), length.out = 100)
+  lambda_seq = seq(max_eigenvalue / 1000, max_eigenvalue, length.out = 50)
 
   lambda = cv_component_ridge_regression(Y, D_list, component, covariates, outcomes, estimator, lambda_seq = lambda_seq)
   beta_estimate = solve(cor_estimate[covariates, covariates] + diag(lambda, length(covariates), length(covariates))) %*% cor_estimate[covariates, outcomes]
@@ -231,20 +231,18 @@ cv_component_ridge_regression = function(Y, D_list, component, covariates, outco
 
   cv_loss = numeric(length(lambda_seq))
 
-  for (k in 1:K) {
+  for (l in 1:length(lambda_seq)) {
 
-    fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]))
-    cor_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
-    cor_hat_train[is.na(cor_hat_train)] = 0
+    for (k in 1:K) {
 
-    fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]))
-    cor_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
-    cor_hat_test[is.na(cor_hat_test)] = 0
-
-    for (l in 1:length(lambda_seq)) {
-
+      fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]))
+      cor_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
+      cor_hat_train[is.na(cor_hat_train)] = 0
       beta_hat = solve(cor_hat_train[covariates, covariates] + diag(lambda_seq[l], length(covariates), length(covariates))) %*% cor_hat_train[covariates, outcomes]
 
+      fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]))
+      cor_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
+      cor_hat_test[is.na(cor_hat_test)] = 0
       cv_loss[l] = cv_loss[l] - 2 * cor_hat_test[outcomes, covariates] %*% beta_hat + t(beta_hat) %*% cor_hat_test[covariates, covariates] %*% beta_hat
 
     }
@@ -272,7 +270,7 @@ mvREML_DR5 = function(Y, D_list) {
 
 }
 
-simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALYSIS_RESULT_PATH) {
+simulation = function(components, n, q, Sigma, method, id, replicate) {
 
   D_0 = diag(1, nrow = n, ncol = n)
   D_1_and_2 = hcp_kinship(n)
@@ -300,7 +298,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
 
   } else {
 
-    outcome = 25
+    outcome = 9
     covariates = 92:182
 
     Sigma_hat = fit$Sigma_hat
@@ -330,14 +328,6 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
   chol_D_1 = attr(D_1, "chol")
   chol_D_2 = attr(D_2, "chol")
 
-  if (id == "smooth") {
-    sqrt_Sigma_0 = sqrt_matrix(Sigma_0 + diag(1, q, q))
-    set.seed(123)
-    Sigma_0 = heritability_prop[1] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
-    Sigma_1 = heritability_prop[2] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
-    Sigma_2 = heritability_prop[3] * get(paste0("generate_", Sigma, "_Sigma"))(1000)
-  }
-
   if (components == 2) {
     Sigma_list_truth = list(Sigma_0, Sigma_1)
     D_list = list(D_0, D_1)
@@ -346,11 +336,17 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     D_list = list(D_0, D_1, D_2)
   }
 
+  if (id == "smooth") {
+   Sigma_0 = Sigma_0 + diag(1, q, q)
+   sqrt_Sigma_0 = sqrt_matrix(Sigma_0)
+  }
+
   set.seed(replicate)
   Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
-  Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
-
+  if (components == 3) {
+    Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
+  }
   Y = Epsilon + Gamma_1
   if (components == 3) {
     Y = Y + Gamma_2
@@ -369,7 +365,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     estimator = mvREHE
   } else if (method == "mvREHE_cvDR") {
     estimator = function(Y, D_list) {
-      fit = mvREHE_cvDR(Y, D_list, K = 5, r_seq = floor(seq(5, q, length.out = 20)), compute_full_Sigma = TRUE)
+      fit = mvREHE_cvDR(Y, D_list, K = 5, r_seq = intersect(1:q, c(5, 10, 50, 100, q)), compute_full_Sigma = TRUE)
       fit$Sigma_hat = lapply(fit$Sigma_r_hat, function(Sigma) fit$V %*% Sigma %*% t(fit$V))
       fit
     }
@@ -377,7 +373,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     source("scripts/mvREML.R")
     estimator = mvREML
   }
-  else if (method == "mvREML_DR5") {
+    else if (method == "mvREML_DR5") {
     source("scripts/mvREML.R")
     estimator = mvREML_DR5
   } else if (method == "HE") {
@@ -393,9 +389,6 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     estimator = function(Y, D_list) {
       univariate(Y, D_list, mvREML)
     }
-  } else if (method == "GEMMA") {
-    source("scripts/GEMMA.R")
-    estimator = GEMMA
   }
 
   time = system.time({estimate = estimator(Y, D_list)})[3]
@@ -406,13 +399,17 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     truncated = rep(0, length(estimate$Sigma_hat))
   }
 
-  min_eigenvalue = sapply(estimate$Sigma_hat, function(Sigma) min(eigen(Sigma)$val))
+  if (method == "mvHE") {
+    min_eigenvalue = sapply(1:length(estimate$Sigma_hat), function(i) attr(estimate$Sigma_hat[[i]], "min_eigenvalue"))
+  } else {
+    min_eigenvalue = rep(0, length(estimate$Sigma_hat))
+  }
 
   if (smoothed) {
     time = system.time({estimate$Sigma_hat = lapply(estimate$Sigma_hat, smooth_cov)})[3] + time
   }
 
-  if (grepl("lowdim|data", id) & !grepl("REML|cv", method) & grepl("mv", method)) {
+  if (grepl("lowdim|data", id) & !grepl("REML", method) & grepl("mv", method)) {
     beta_error = sapply(1:length(estimate$Sigma_hat), function(k) {
       beta_error(estimate$Sigma_hat[[k]], Sigma_list_truth[[k]], Y, D_list, k, covariates, outcome, estimator)
     })
@@ -436,8 +433,78 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     squared_error = mapply(squared_error, estimate$Sigma_hat, Sigma_list_truth),
     diag_squared_error = mapply(diag_squared_error, estimate$Sigma_hat, Sigma_list_truth),
     max_principal_angle = max_principal_angle,
-    h2_error = h2_error(estimate$Sigma_hat, Sigma_list_truth),
+    h2_error = (var_prop(estimate$Sigma_hat)[2] - var_prop(Sigma_list_truth)[2])^2,
     beta_error = beta_error
   ))
 
 }
+
+SIMULATION_ID = commandArgs(trailingOnly=TRUE)[1]
+COMPONENTS = commandArgs(trailingOnly=TRUE)[2]
+
+RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
+DATA_ANALYSIS_RESULT_PATH = paste0("data_analysis_", COMPONENTS, "_components")
+dir.create(RESULT_PATH, recursive = TRUE)
+
+replicates = 1:500
+
+if (SIMULATION_ID == "lowdim1") { # 48000
+  methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
+  Sigmas = "uniform"
+  ns = c(250, 500, 1000, 2000, 4000, 8000)
+  qs = c(10, 20)
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
+  qs = 5
+  grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n"))
+} else if (SIMULATION_ID == "lowdim2") { # 48000
+  methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
+  Sigmas = "moderate"
+  ns = c(250, 500, 1000, 2000, 4000, 8000)
+  qs = c(10, 20)
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
+  qs = 5
+  grid = rbind(grid, expand.grid(method = c(methods, "mvREML"), replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n"))
+} else if (SIMULATION_ID == "highdim") { # 30000
+  methods = c("mvHE", "mvREHE", "mvREHE_cvDR", "mvREML_DR5")
+  Sigmas = c("fast", "moderate", "slow")
+  ns = c(500, 1000, 2000, 4000, 8000)
+  qs = 1000
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
+} else if (SIMULATION_ID == "smooth") { # 20000
+  methods = c("mvHE", "mvREHE", "mvHE-smoothed", "mvREHE-smoothed")
+  Sigmas = c("smooth_1", "smooth_2")
+  qs = 100
+  ns = c(500, 1000, 2000, 4000, 8000)
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
+} else if (SIMULATION_ID == "data") { # 30000
+  methods = c("mvHE", "mvREHE") # , "mvREHE_cvDR", "mvREML_DR5")
+  Sigmas = c("data_10", "data_100", "data_1000")
+  ns = c(500, 1000, 2000, 4000, 8000)
+  qs = NA
+  grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
+}
+
+PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[3])
+print(grid[PARAMETER_ID, ])
+replicate = grid[PARAMETER_ID, "replicate"]
+n = grid[PARAMETER_ID, "n"]
+q = grid[PARAMETER_ID, "q"]
+Sigma = grid[PARAMETER_ID, "Sigma"]
+method = as.character(grid[PARAMETER_ID, "method"])
+experiment = grid[PARAMETER_ID, "experiment"]
+
+output = simulation(COMPONENTS, n, q, Sigma, method, SIMULATION_ID, replicate)
+estimate = paste0("Sigma_", 1:COMPONENTS - 1)
+
+diag_squared_error = data.frame(replicate = replicate, estimate = estimate, diag_squared_error = output$diag_squared_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+squared_error = data.frame(replicate = replicate, estimate = estimate, squared_error = output$squared_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+spectral_error = data.frame(replicate = replicate, estimate = estimate, spectral_error = output$spectral_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+h2_error = data.frame(replicate = replicate, h2_error = output$h2_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+beta_error = data.frame(replicate = replicate, estimate = estimate, beta_error = output$beta_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+max_principal_angle = cbind(output$max_principal_angle, replicate = replicate, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, Sigma = Sigma, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+truncated = data.frame(estimate = estimate, truncated = output$truncated, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+min_eigenvalue = data.frame(estimate = estimate, min_eigenvalue = output$min_eigenvalue, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+
+saveRDS(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
+print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
