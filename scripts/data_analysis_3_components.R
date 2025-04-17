@@ -543,6 +543,17 @@ patchwork::wrap_plots(figure, ncol = 4, byrow = TRUE) +
   patchwork::plot_annotation(tag_levels = list(c("a", "b", "c", "d")))
 dev.off()
 
+figure = list()
+figure[[1]] = plot_connectome_vec(r2_raw, bquote("Observed"~R^2), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[2]] = plot_connectome_vec(r2_components[[genetic_component]], bquote("Genetic"~R^2), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[3]] = plot_connectome_vec(r2_components[[common_env_component]], bquote("Common Env"~R^2), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+figure[[4]] = plot_connectome_vec(r2_components[[unique_env_component]], bquote("Unique Env"~R^2), groups = fun_groups, community = community, breaks = c(0, 1), colors = c("white", "red"), upper_triangle = TRUE)
+
+pdf(file.path(RESULT_PATH, "r2_poster.pdf"), height = 5 * 0.9 / 2, width = 4.8 * 0.8 * 2)
+patchwork::wrap_plots(figure[c(1, 4, 2, 3)], ncol = 4, byrow = TRUE) +
+  patchwork::plot_annotation(tag_levels = list(c("a", "b", "c", "d")))
+dev.off()
+
 connection_names[order(r2_components[[genetic_component]], decreasing = TRUE)]
 connection_names[order(r2_components[[common_env_component]], decreasing = TRUE)]
 
