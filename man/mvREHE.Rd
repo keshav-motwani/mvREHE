@@ -10,6 +10,7 @@ mvREHE(
   lambda = NULL,
   tolerance = 1e-06,
   max_iter = 1000,
+  return_full = TRUE,
   Sigma_init_list = NULL,
   W_list = NULL,
   Q = NULL,

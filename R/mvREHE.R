@@ -15,7 +15,7 @@
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
+mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, return_full = TRUE, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -24,9 +24,19 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
   K = length(D_list)
   difference = numeric(max_iter)
 
+  highdim = q > n
+
+  if (highdim) {
+
+    s = svd(Y)
+    Y = Y %*% s$v
+    q = ncol(Y)
+
+  }
+
   if (is.null(lambda)) lambda = rep(0, K)
   if (is.null(Sigma_init_list)) {
-    Sigma_list = lapply(1:length(D_list), function(i) diag(matrixStats::colVars(Y), q, q))
+    Sigma_list = lapply(1:length(D_list), function(i) matrix(0, q, q))
   } else if (is.character(Sigma_init_list) && Sigma_init_list == "mvHE") {
     Sigma_list = mvHE(Y, D_list)$Sigma_hat
   } else {
@@ -48,6 +58,8 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
 
   for (iter in 1:max_iter) {
 
+    print(iter)
+
     Sigma_list_old = Sigma_list
 
     for (z in 1:K) {
@@ -55,8 +67,8 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
       for (k in setdiff(1:K, z)) {
         mat = mat - Sigma_list[[k]] * Q[k, z]
       }
-      eig = eigen(mat, symmetric = TRUE)
-      Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(eig$values / (Q[z, z] + (lambda[z] * n^2)), 0))
+      eig = positive_eigen(mat)
+      Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(c(eig$values) / (Q[z, z] + (lambda[z] * n^2)), 0))
     }
 
     if (!is.null(tolerance)) {
@@ -75,8 +87,26 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, S
 
   }
 
-  return(list(Sigma_hat = Sigma_list,
-              difference = difference[difference != 0]))
+  result = list(difference = difference[difference != 0])
+
+  if (highdim) {
+
+    result$Sigma_r_hat = Sigma_list
+    result$V = s$v
+
+    if (return_full) {
+      result$Sigma_hat = lapply(Sigma_list, function(Sigma_r) s$v %*% Sigma_r %*% t(s$v))
+    }
+
+  } else {
+
+    result$Sigma_hat = Sigma_list
+    result$Sigma_r_hat = Sigma_list
+    result$V = NULL
+
+  }
+
+  return(result)
 
 }
 

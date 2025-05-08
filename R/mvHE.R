@@ -7,11 +7,22 @@
 #' @export
 #'
 #' @examples
-mvHE = function(Y, D_list, truncate = TRUE) {
+mvHE = function(Y, D_list, truncate = TRUE, return_full = TRUE) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
   q = ncol(Y)
+  n = nrow(Y)
+
+  highdim = q > n
+
+  if (highdim) {
+
+    s = svd(Y)
+    Y = Y %*% s$v
+    q = ncol(Y)
+
+  }
 
   Sigma_hat = replicate(length(D_list), matrix(NA, q, q), simplify = FALSE)
 
@@ -40,20 +51,24 @@ mvHE = function(Y, D_list, truncate = TRUE) {
 
   }
 
-  for (k in 1:length(D_list)) {
+  print("truncating")
 
-    Sigma_k_hat = Sigma_hat[[k]]
-    eigen_Sigma_k_hat = eigen(Sigma_k_hat)
-    if (any(eigen_Sigma_k_hat$values < 0) & truncate) {
-      Sigma_hat[[k]] = eigen_Sigma_k_hat$vectors %*% diag(pmax(eigen_Sigma_k_hat$values, 0), ncol(eigen_Sigma_k_hat$vectors), ncol(eigen_Sigma_k_hat$vectors)) %*% t(eigen_Sigma_k_hat$vectors)
-      attr(Sigma_hat[[k]], "truncated") = TRUE
-    } else {
-      attr(Sigma_hat[[k]], "truncated") = FALSE
+  if (truncate) {
+    for (k in 1:length(D_list)) {
+      Sigma_k_hat = Sigma_hat[[k]]
+      eigen_Sigma_k_hat = positive_eigen(Sigma_k_hat)
+      Sigma_hat[[k]] = eigen_Sigma_k_hat$vectors %*% diag(c(pmax(eigen_Sigma_k_hat$values, 0)), ncol(eigen_Sigma_k_hat$vectors), ncol(eigen_Sigma_k_hat$vectors)) %*% t(eigen_Sigma_k_hat$vectors)
     }
-    attr(Sigma_hat[[k]], "min_eigenvalue") = min(eigen_Sigma_k_hat$values)
+  }
+
+  if (highdim) {
+
+    Sigma_hat = lapply(Sigma_hat, function(Sigma_r) s$v %*% Sigma_r %*% t(s$v))
 
   }
 
-  return(list(Sigma_hat = Sigma_hat))
+  print("done truncating")
+
+  return(list(Sigma_hat = Sigma_hat, Sigma_r_hat = Sigma_hat, V = NULL))
 
 }

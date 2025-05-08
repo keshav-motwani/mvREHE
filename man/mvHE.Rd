@@ -4,7 +4,7 @@
 \alias{mvHE}
 \title{mvHE}
 \usage{
-mvHE(Y, D_list, truncate = TRUE)
+mvHE(Y, D_list, truncate = TRUE, return_full = TRUE)
 }
 \arguments{
 \item{D_list}{}

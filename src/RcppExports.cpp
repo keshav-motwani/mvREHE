@@ -2,6 +2,7 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <RcppArmadillo.h>
+#include <RcppEigen.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -71,12 +72,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// positive_eigen
+List positive_eigen(const arma::mat& A, double tol, double pos_tol, int buffer);
+RcppExport SEXP _mvREHE_positive_eigen(SEXP ASEXP, SEXP tolSEXP, SEXP pos_tolSEXP, SEXP bufferSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< double >::type pos_tol(pos_tolSEXP);
+    Rcpp::traits::input_parameter< int >::type buffer(bufferSEXP);
+    rcpp_result_gen = Rcpp::wrap(positive_eigen(A, tol, pos_tol, buffer));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 6},
     {"_mvREHE_loss_DR", (DL_FUNC) &_mvREHE_loss_DR, 5},
     {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 5},
     {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 5},
+    {"_mvREHE_positive_eigen", (DL_FUNC) &_mvREHE_positive_eigen, 4},
     {NULL, NULL, 0}
 };
 
