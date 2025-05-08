@@ -4,7 +4,7 @@ SIMULATION_ID = commandArgs(trailingOnly=TRUE)[1]
 COMPONENTS = commandArgs(trailingOnly=TRUE)[2]
 
 RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
-DATA_ANALYSIS_RESULT_PATH = paste0("data_analysis_", COMPONENTS, "_components")
+DATA_ANALYSIS_RESULT_PATH = "data_analysis_3_components_68ROI_cov/"
 dir.create(RESULT_PATH, recursive = TRUE)
 
 replicates = 1:50
@@ -54,6 +54,7 @@ Sigma = grid[PARAMETER_ID, "Sigma"]
 method = as.character(grid[PARAMETER_ID, "method"])
 experiment = grid[PARAMETER_ID, "experiment"]
 
+# debugonce(mvHE)
 output = simulation(COMPONENTS, n, q, Sigma, method, SIMULATION_ID, replicate, DATA_ANALYSIS_RESULT_PATH)
 estimate = paste0("Sigma_", 1:COMPONENTS - 1)
 
@@ -62,10 +63,11 @@ squared_error = data.frame(replicate = replicate, estimate = estimate, squared_e
 spectral_error = data.frame(replicate = replicate, estimate = estimate, spectral_error = output$spectral_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 h2_error = data.frame(replicate = replicate, h2_error = output$h2_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 beta_error = data.frame(replicate = replicate, estimate = estimate, beta_error = output$beta_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-max_principal_angle = cbind(output$max_principal_angle, replicate = replicate, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+r2_error = data.frame(replicate = replicate, estimate = estimate, r2_error = output$r2_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+max_principal_angle = NA # cbind(output$max_principal_angle, replicate = replicate, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, Sigma = Sigma, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-truncated = data.frame(estimate = estimate, truncated = output$truncated, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+# truncated = data.frame(estimate = estimate, truncated = output$truncated, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 min_eigenvalue = data.frame(estimate = estimate, min_eigenvalue = output$min_eigenvalue, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 
-saveRDS(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
-print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
+saveRDS(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, r2_error = r2_error, max_principal_angle = max_principal_angle, time = time, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
+print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, r2_error = r2_error, max_principal_angle = max_principal_angle, time = time, min_eigenvalue = min_eigenvalue))
