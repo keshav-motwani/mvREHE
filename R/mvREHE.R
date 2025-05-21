@@ -67,7 +67,7 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, r
       for (k in setdiff(1:K, z)) {
         mat = mat - Sigma_list[[k]] * Q[k, z]
       }
-      eig = positive_eigen(mat)
+      eig = eigen(mat)
       Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(c(eig$values) / (Q[z, z] + (lambda[z] * n^2)), 0))
     }
 
@@ -107,6 +107,21 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, r
   }
 
   return(result)
+
+}
+
+mvREHE_weighted = function(Y, D_list) {
+
+  sds = matrixStats::colSds(Y)
+  sds[sds == 0] = 1
+
+  Y = Y %*% diag(1 / sds)
+
+  est = mvREHE(Y, D_list, tolerance = 1e-3)
+
+  est$Sigma_hat = lapply(1:length(D_list), function(k) diag(sds) %*% est$Sigma_hat[[k]] %*% diag(sds))
+
+  est
 
 }
 
