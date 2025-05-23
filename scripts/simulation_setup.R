@@ -454,7 +454,20 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
 
   } else {
 
-    Sigma_hat = fit$Sigma_hat_sim
+    outcome = 25
+    covariates = 92:182
+
+    Sigma_hat = fit$Sigma_hat
+    q = ncol(Sigma_hat[[1]])
+
+    cond_num = 100
+    for (k in 1:length(Sigma_hat)) {
+      eig = eigen(Sigma_hat[[k]][covariates, covariates])
+      diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
+      attr(Sigma_hat[[k]], "sqrt") = sqrt_matrix(Sigma_hat[[k]])
+    }
+
+    fit$beta = lapply(Sigma_hat, function(Sigma) solve(Sigma[covariates, covariates], Sigma[covariates, outcome]))
 
     if (length(Sigma_hat) == 2) {
       Sigma_hat[[3]] = NA
