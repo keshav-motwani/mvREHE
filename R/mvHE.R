@@ -7,7 +7,7 @@
 #' @export
 #'
 #' @examples
-mvHE = function(Y, D_list, truncate = TRUE, return_full = TRUE) {
+mvHE = function(Y, D_list, truncate = TRUE) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -51,12 +51,10 @@ mvHE = function(Y, D_list, truncate = TRUE, return_full = TRUE) {
 
   }
 
-  print("truncating")
-
   if (truncate) {
     for (k in 1:length(D_list)) {
       Sigma_k_hat = Sigma_hat[[k]]
-      eigen_Sigma_k_hat = positive_eigen(Sigma_k_hat)
+      eigen_Sigma_k_hat = eigen(Sigma_k_hat)
       Sigma_hat[[k]] = eigen_Sigma_k_hat$vectors %*% diag(c(pmax(eigen_Sigma_k_hat$values, 0)), ncol(eigen_Sigma_k_hat$vectors), ncol(eigen_Sigma_k_hat$vectors)) %*% t(eigen_Sigma_k_hat$vectors)
     }
   }
@@ -67,8 +65,6 @@ mvHE = function(Y, D_list, truncate = TRUE, return_full = TRUE) {
 
   }
 
-  print("done truncating")
-
-  return(list(Sigma_hat = Sigma_hat, Sigma_r_hat = Sigma_hat, V = NULL))
+  return(list(Sigma_hat = Sigma_hat))
 
 }
