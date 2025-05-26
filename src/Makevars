@@ -1,4 +1,3 @@
-
 ## With R 3.1.0 or later, you can uncomment the following line to tell R to
 ## enable compilation with C++11 (where available)
 ##
@@ -11,7 +10,6 @@
 # Use C++11 standard
 CXX_STD = CXX11
 
-# Add Spectra include path and keep OpenMP / BLAS support
-PKG_CXXFLAGS = -I./Spectra $(SHLIB_OPENMP_CXXFLAGS)
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
 
 PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

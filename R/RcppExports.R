@@ -17,7 +17,3 @@ compute_Y_tilde <- function(Y, row_indices, col_indices, j, m) {
     .Call('_mvREHE_compute_Y_tilde', PACKAGE = 'mvREHE', Y, row_indices, col_indices, j, m)
 }
 
-positive_eigen <- function(A, tol = 1e-10, pos_tol = 1e-12, buffer = 10L) {
-    .Call('_mvREHE_positive_eigen', PACKAGE = 'mvREHE', A, tol, pos_tol, buffer)
-}
-
