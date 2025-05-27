@@ -1,6 +1,8 @@
 library(mvREHE)
 library(Matrix)
 
+source("scripts/latent_regression.R")
+
 expand_estimate = function(estimate, size) {
   kronecker(estimate, tcrossprod(rep(1, size / ncol(estimate))))
 }
@@ -99,7 +101,7 @@ modified_chol = function(K, n) {
   expand = expand[, !duplicated(K)]
   expand[cbind(which(duplicated(K)), which(duplicated(K)) - 1:sum(duplicated(K)))] = 1
   chol = chol %*% t(expand)
-  chol = (Matrix::bdiag(replicate(ceiling(n / 1000), chol, simplify = FALSE)))
+  chol = as.matrix(Matrix::bdiag(replicate(ceiling(n / 1000), chol, simplify = FALSE)))
 
   return(chol)
 
@@ -118,13 +120,25 @@ hcp_kinship = function(n) {
   K_C = (K_G > 0) * 1
   chol_C = modified_chol(K_C, n)
   K_C = as.matrix(Matrix::bdiag(replicate(ceiling(n / 1000), K_C, simplify = FALSE)))
-  attr(K_C, "chol") = as.matrix(chol_C)
+  attr(K_C, "chol") = chol_C
 
   chol_G = modified_chol(K_G, n)
   K_G = as.matrix(Matrix::bdiag(replicate(ceiling(n / 1000), K_G, simplify = FALSE)))
-  attr(K_G, "chol") = as.matrix(chol_G)
+  attr(K_G, "chol") = chol_G
 
   return(list(G = K_G, C = K_C))
+
+}
+
+extract_blocks = function(mat) {
+  g = igraph::graph.adjacency(mat, weighted = TRUE)
+  groups = unique(lapply(Map(sort, igraph::neighborhood(g, nrow(mat))), as.numeric))
+  return(groups)
+}
+
+make_t_distributed = function(mat, blocks, df) {
+
+  diag(rep(sqrt(df / rchisq(length(blocks), df)), lengths(blocks))) %*% mat * sqrt((df - 2) / df)
 
 }
 
@@ -152,243 +166,41 @@ smooth_cov = function(cov, diag = FALSE, output_size = 1000) {
 
 }
 
-matrix_regression_from_cov = function(Sigma_r_hat, V, rank, lambda, max_iter = 1000, tolerance = 1e-6, n_init = 5) {
+h2_error = function(Sigma_list_estimate, Sigma_list_truth) {
 
-  if (!is.null(V)) {
-    p = sqrt(nrow(V) - 1)
+  h2_estimate = sapply(1:ncol(Sigma_list_estimate[[1]]), function(j) Sigma_list_estimate[[2]][j, j] / sum(sapply(Sigma_list_estimate, function(Sigma) Sigma[j, j])))
+  h2_truth = sapply(1:ncol(Sigma_list_truth[[1]]), function(j) Sigma_list_truth[[2]][j, j] / sum(sapply(Sigma_list_estimate, function(Sigma) Sigma[j, j])))
+
+  sqrt(sum((h2_estimate - h2_truth)^2))
+
+}
+
+max_principal_angle = function(cov_estimate, cov_truth, r) {
+
+  if (!is.null(cov_estimate) & !is.null(cov_truth) & !any(is.na(cov_estimate))) {
+
+    if (ncol(cov_truth) > ncol(cov_estimate)) {
+      cov_estimate = expand_estimate(cov_estimate, ncol(cov_truth))
+    }
+
+    cor_estimate = cov2cor(cov_estimate)
+    cor_estimate[is.na(cor_estimate)] = 0
+
+    X = eigen(cor_estimate)$vectors[, 1:r, drop = FALSE]
+    Y = eigen(cov2cor(cov_truth))$vectors[, 1:r, drop = FALSE]
+
+    pracma::subspace(X, Y) * 180 / pi
+
   } else {
-    p = sqrt(nrow(Sigma_r_hat) - 1)
+    NA
   }
-  best_objective = Inf
-  best_solution = NULL
-
-  for (init in 1:n_init) {
-
-    print(init)
-
-    if (length(p) == 0) {
-      print("huh")
-    }
-    beta1 = matrix(rnorm(p * rank, sd = 1), p, rank)
-    beta2 = beta1
-
-    objective = numeric(2 * max_iter)
-    difference = numeric(max_iter)
-
-    for (iter in 1:max_iter) {
-
-      beta1_old = beta1
-      beta2_old = beta2
-
-      if (!is.null(V)) {
-        # A = compute_A_for_Sigma_y_Xbeta2(beta2, V)
-        A = rbind(c(1, rep(0, p^2)), cbind(rep(0, p * rank), kronecker(t(beta2), diag(1, p, p)))) %*% V
-      } else {
-        A = rbind(c(1, rep(0, p^2)), cbind(rep(0, p * rank), kronecker(t(beta2), diag(1, p, p))))
-      }
-      Sigma = A %*% Sigma_r_hat %*% t(A)
-      beta1[] = solve(Sigma[-1, -1] + diag(lambda, ncol(Sigma) - 1, ncol(Sigma) - 1), Sigma[1, -1])
-
-      if (!is.null(V)) {
-        # A = compute_A_for_objective(beta1, beta2, V)
-        A = rbind(c(1, rep(0, p^2)), c(0, c(tcrossprod(beta1, beta2)))) %*% V
-      } else {
-        A = rbind(c(1, rep(0, p^2)), c(0, c(tcrossprod(beta1, beta2))))
-      }
-      Sigma = A %*% Sigma_r_hat %*% t(A)
-      objective[2 * iter - 1] = Sigma[1, 1] - 2 * Sigma[1, 2] + Sigma[2, 2] + lambda * (sum(beta1^2) + sum(beta2^2))
-
-      if (!is.null(V)) {
-        # A = compute_A_for_Sigma_y_Xtbeta1(beta1, V)
-        A = rbind(c(1, rep(0, p^2)), cbind(rep(0, p * rank), kronecker(diag(1, p, p), t(beta1)))) %*% V
-      } else {
-        A = rbind(c(1, rep(0, p^2)), cbind(rep(0, p * rank), kronecker(diag(1, p, p), t(beta1))))
-      }
-      Sigma = A %*% Sigma_r_hat %*% t(A)
-      beta2[] = matrix(solve(Sigma[-1, -1] + diag(lambda, ncol(Sigma) - 1, ncol(Sigma) - 1), Sigma[1, -1]), ncol = rank, byrow = TRUE)
-
-      if (!is.null(V)) {
-        # A = compute_A_for_objective(beta1, beta2, V)
-        A = rbind(c(1, rep(0, p^2)), c(0, c(tcrossprod(beta1, beta2)))) %*% V
-      } else {
-        A = rbind(c(1, rep(0, p^2)), c(0, c(tcrossprod(beta1, beta2))))
-      }
-      Sigma = A %*% Sigma_r_hat %*% t(A)
-      objective[2 * iter] = Sigma[1, 1] - 2 * Sigma[1, 2] + Sigma[2, 2] + lambda * (sum(beta1^2) + sum(beta2^2))
-      difference[iter] = norm(beta1 %*% t(beta2) - beta1_old %*% t(beta2_old), "F") / (norm(beta1 %*% t(beta2), "F") + 1e-12)
-
-      if (iter > 5 && difference[iter] < tolerance) {
-        break
-      }
-    }
-
-    final_objective = objective[max(which(objective != 0))]
-    if (final_objective < best_objective) {
-      best_objective = final_objective
-      best_solution = list(
-        beta1 = beta1,
-        beta2 = beta2,
-        difference = difference[difference != 0],
-        objective = objective[objective != 0],
-        init_number = init,
-        final_objective = final_objective
-      )
-    }
-  }
-
-  return(best_solution)
-}
-
-latent_matrix_regression = function(Y, D_list, component, outcome, covariates, rank, lambda, estimator, ...) {
-
-  fit = estimator(Y, D_list)
-
-  Sigma_r_hat = fit$Sigma_hat[[component]]
-
-  covariates = vech_to_vec_indices(covariates)
-
-  if (!is.null(fit$V)) {
-    V <- fit$V[c(outcome, covariates), ]
-  } else {
-    V = NULL
-    Sigma_r_hat = Sigma_r_hat[c(outcome, covariates), c(outcome, covariates)]
-  }
-
-  matrix_regression_from_cov(Sigma_r_hat, V, rank, lambda, ...)
 
 }
 
-
-matrix_regression = function(Y, outcome, covariates, rank, lambda, ...) {
-
-  Sigma_r_hat = cov(Y)
-
-  covariates = vech_to_vec_indices(covariates)
-
-  V = NULL
-  Sigma_r_hat = Sigma_r_hat[c(outcome, covariates), c(outcome, covariates)]
-
-  matrix_regression_from_cov(Sigma_r_hat, V, rank, lambda, ...)
-
-}
-
-vech_to_vec_indices <- function(vech_indices) {
-
-  q <- length(vech_indices)
-  p <- (sqrt(8*q + 1) - 1)/2
-
-  if(p != round(p)) {
-    stop("Input vector length is not valid for a symmetric matrix vech representation")
-  }
-
-  mat = matrix(0, p, p)
-
-  mat[lower.tri(mat, diag = TRUE)] = vech_indices
-
-  c(mat + t(mat) - diag(diag(mat), p, p))
-
-}
-
-cv_latent_matrix_regression <- function(Y, D_list, outcomes, covariates, rank_seq, lambda_seq, estimator,
-                                        K = 2, folds = NULL, cores = parallel::detectCores() - 1, ...) {
-
-  require(parallel)
-
-  if (is.null(folds)) {
-    folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y) / K)))
-  } else {
-    stopifnot(length(setdiff(1:nrow(Y), unlist(folds))) == 0)
-    stopifnot(length(setdiff(unlist(folds), 1:nrow(Y))) == 0)
-  }
-
-  covariates = vech_to_vec_indices(covariates)
-
-  cv_r2 = array(0, dim = c(length(D_list), length(outcomes), length(rank_seq), length(lambda_seq)))
-
-  for (k in 1:K) {
-
-    fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]), return_full = FALSE)
-    fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]), return_full = FALSE)
-
-    for (c in 1:length(D_list)) {
-
-      # Create full grid of outcome × rank × lambda
-      grid <- expand.grid(
-        o_idx = seq_along(outcomes),
-        r_idx = seq_along(rank_seq),
-        l_idx = seq_along(lambda_seq)
-      )
-
-      results_grid <- lapply(seq_len(nrow(grid)), function(idx) {
-        row <- grid[idx, ]
-        o_idx <- row$o_idx
-        r_idx <- row$r_idx
-        l_idx <- row$l_idx
-
-        o <- outcomes[o_idx]
-        r <- rank_seq[r_idx]
-        l <- lambda_seq[l_idx]
-
-        # Training
-        Sigma_r_hat_train <- fit_train$Sigma_r_hat[[c]]
-        if (!is.null(fit_train$V)) {
-          V_train <- fit_train$V[c(o, covariates), ]
-        } else {
-          V_train = NULL
-          Sigma_r_hat_train = Sigma_r_hat_train[c(o, covariates), c(o, covariates)]
-        }
-        fit <- matrix_regression_from_cov(Sigma_r_hat_train, V_train, r, l, ...)
-        # Testing
-        Sigma_r_hat_test <- fit_test$Sigma_r_hat[[c]]
-        if (!is.null(fit_test$V)) {
-          V_test <- fit_test$V[c(o, covariates), ]
-        } else {
-          V_test = NULL
-          Sigma_r_hat_test = Sigma_r_hat_test[c(o, covariates), c(o, covariates)]
-        }
-
-        A <- rbind(
-          c(1, rep(0, length(covariates))),
-          c(0, c(tcrossprod(fit$beta1, fit$beta2)))
-        )
-
-        if (!is.null(V_test)) {
-          A = A %*% V_test
-        }
-
-        Sigma <- A %*% Sigma_r_hat_test %*% t(A)
-        r2 <- 1 - (Sigma[1, 1] - 2 * Sigma[1, 2] + Sigma[2, 2]) / Sigma[1, 1]
-
-        list(o_idx = o_idx, r_idx = r_idx, l_idx = l_idx, r2 = r2 / K)
-      })
-
-      # Accumulate results
-      for (res in results_grid) {
-        cv_r2[c, res$o_idx, res$r_idx, res$l_idx] <-
-          cv_r2[c, res$o_idx, res$r_idx, res$l_idx] + res$r2
-      }
-    }
-  }
-
-  # Select best rank/lambda based on max CV R²
-  lambda = matrix(NA, length(D_list), length(outcomes))
-  rank = matrix(NA, length(D_list), length(outcomes))
-
-  for (c in 1:length(D_list)) {
-    for (o in 1:length(outcomes)) {
-      idx = which(cv_r2[c, o, , , drop = FALSE] == max(cv_r2[c, o, , ]), arr.ind = TRUE)[1, ]
-      rank[c, o] = rank_seq[idx[3]]
-      lambda[c, o] = lambda_seq[idx[4]]
-    }
-  }
-
-  return(list(
-    lambda = lambda,
-    rank = rank,
-    cv_r2 = pmax(apply(cv_r2, c(1, 2), max), 0),
-    cv_r2_full = cv_r2
-  ))
-
+pseudoinverse = function(mat) {
+  eig = eigen(mat)
+  r = sum(eig$val > 1e-12)
+  eig$vec[, 1:r] %*% diag(1/eig$val[1:r]) %*% t(eig$vec[, 1:r])
 }
 
 get_vec_beta = function(beta1, beta2) {
@@ -396,33 +208,35 @@ get_vec_beta = function(beta1, beta2) {
   beta[lower.tri(beta, diag = TRUE)]
 }
 
-beta_error = function(Y, D_list, Sigma_hat, Sigma_r_hat, V, estimator, Sigma_true, beta_true) {
+beta_error = function(Y, D_list, fit, estimator, Sigma_true) {
 
-  outcome = 1
-  covariates = 2:56
+  outcome = 25
+  covariates = 92:182
 
-  cv_fit = cv_latent_matrix_regression(Y, D_list, outcome, covariates, 1:3, 10^seq(0, -2, length.out = 10), estimator, 2)
-
-  beta_hat = lapply(1:3, function(k) {
-    covariates = vech_to_vec_indices(covariates)
-    if (!is.null(V)) {
-      V <- V[c(outcome, covariates), ]
-      Sigma = Sigma_r_hat[[k]]
-    } else {
-      Sigma = Sigma_r_hat[[k]][c(outcome, covariates), c(outcome, covariates)]
-    }
-    fit = matrix_regression_from_cov(Sigma, V, cv_fit$rank[k, 1], cv_fit$lambda[k, 1])
-    get_vec_beta(fit$beta1, fit$beta2)
+  beta_true = lapply(Sigma_true, function(Sigma) {
+    Sigma = cov2cor(Sigma)
+    solve(Sigma[covariates, covariates], Sigma[covariates, outcome])
   })
 
-  beta_error = sapply(1:3, function(k) sqrt(sum((beta_hat[[k]] - beta_true[[k]])^2)))
+  matrix_lambda_rank = cv_latent_matrix_regression(Y, D_list, outcome, covariates, 1:10, 10^seq(1, -3, length.out = 100), estimator)
+  ridge_lambda = cv_latent_ridge_regression(Y, D_list, fit, outcome, covariates, 100, estimator)
 
-  r2 = sapply(1:3, function(k) 1 - (Sigma_hat[[k]][outcome, outcome] - 2 * Sigma_hat[[k]][outcome, covariates] %*% beta_true[[k]] + t(beta_true[[k]]) %*% Sigma_hat[[k]][covariates, covariates] %*% beta_true[[k]]) / Sigma_hat[[k]][outcome, outcome])
-  r2_true = sapply(1:3, function(k) 1 - (Sigma_true[[k]][outcome, outcome] - 2 * Sigma_true[[k]][outcome, covariates] %*% beta_true[[k]] + t(beta_true[[k]]) %*% Sigma_true[[k]][covariates, covariates] %*% beta_true[[k]]) / Sigma_true[[k]][outcome, outcome])
+  beta_hat_matrix = lapply(1:length(D_list), function(c) {
+    reg_fit = latent_matrix_regression(fit, c, outcome, covariates, matrix_lambda_rank$rank[c, 1], matrix_lambda_rank$lambda[c, 1])
+    get_vec_beta(reg_fit$beta1, reg_fit$beta2)
+  })
 
-  r2_error = abs(r2 - r2_true)
+  beta_hat_ridge = lapply(1:length(D_list), function(c) latent_ridge_regression(fit, c, outcome, covariates, ridge_lambda$lambda[c, 1]))
 
-  return(rbind(beta_error, r2_error))
+  beta_error_matrix = sapply(1:3, function(k) sqrt(sum((beta_hat_matrix[[k]] - beta_true[[k]])^2)))
+  beta_error_ridge = sapply(1:3, function(k) sqrt(sum((beta_hat_ridge[[k]] - beta_true[[k]])^2)))
+
+  # return(beta_error_ridge)
+
+  result = rbind(beta_error_ridge, beta_error_matrix)
+  attr(result, "cv_r2") = list(matrix_lambda_rank$cv_r2_full, ridge_lambda$cv_r2_full)
+
+  return(result)
 
 }
 
@@ -460,14 +274,12 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     Sigma_hat = fit$Sigma_hat
     q = ncol(Sigma_hat[[1]])
 
-    cond_num = 100
+    cond_num = as.numeric(strsplit(as.character(Sigma), "_")[[1]][2])
     for (k in 1:length(Sigma_hat)) {
       eig = eigen(Sigma_hat[[k]][covariates, covariates])
       diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
       attr(Sigma_hat[[k]], "sqrt") = sqrt_matrix(Sigma_hat[[k]])
     }
-
-    fit$beta = lapply(Sigma_hat, function(Sigma) solve(Sigma[covariates, covariates], Sigma[covariates, outcome]))
 
     if (length(Sigma_hat) == 2) {
       Sigma_hat[[3]] = NA
@@ -480,10 +292,9 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
     sqrt_Sigma_2 = attr(Sigma_2, "sqrt")
 
-    q = ncol(Sigma_hat[[1]])
-
   }
 
+  chol_D_0 = D_0
   chol_D_1 = attr(D_1, "chol")
   chol_D_2 = attr(D_2, "chol")
 
@@ -504,7 +315,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
   }
 
   set.seed(replicate)
-  Epsilon = matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
+  Epsilon = t(chol_D_0) %*% matrix(rnorm(n * q), nrow = n) %*% t(sqrt_Sigma_0)
   Gamma_1 = t(chol_D_1) %*% matrix(rnorm(nrow(chol_D_1) * q), nrow = nrow(chol_D_1)) %*% t(sqrt_Sigma_1)
   Gamma_2 = t(chol_D_2) %*% matrix(rnorm(nrow(chol_D_2) * q), nrow = nrow(chol_D_2)) %*% t(sqrt_Sigma_2)
 
@@ -557,43 +368,42 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
 
   time = system.time({estimate = estimator(Y, D_list)})[3]
 
-  # if (method == "mvHE") {
-  #   truncated = 1 * sapply(1:length(estimate$Sigma_hat), function(i) attr(estimate$Sigma_hat[[i]], "truncated"))
-  # } else {
-  #   truncated = rep(0, length(estimate$Sigma_hat))
-  # }
+  if (method == "mvHE") {
+    truncated = 1 * sapply(1:length(estimate$Sigma_hat), function(i) attr(estimate$Sigma_hat[[i]], "truncated"))
+  } else {
+    truncated = rep(0, length(estimate$Sigma_hat))
+  }
 
-  min_eigenvalue = NA # sapply(estimate$Sigma_hat, function(Sigma) min(eigen(Sigma)$val))
+  min_eigenvalue = sapply(estimate$Sigma_hat, function(Sigma) min(eigen(Sigma)$val))
 
   if (smoothed) {
     time = system.time({estimate$Sigma_hat = lapply(estimate$Sigma_hat, smooth_cov)})[3] + time
   }
 
-  if (grepl("data", id) & !grepl("REML|cv", method) & grepl("mv", method)) {
-    beta_error = beta_error(Y, D_list, estimate$Sigma_hat, estimate$Sigma_r_hat, estimate$V, estimator, Sigma_list_truth, fit$beta)
+  if (grepl("lowdim|data", id) & !grepl("REML|cv", method) & grepl("mv", method)) {
+    beta_error = beta_error(Y, D_list, estimate, estimator, Sigma_list_truth)
   } else {
-    beta_error = rbind(NA, NA)
+    beta_error = NA
   }
 
-  # rs = intersect(c(1, 3, 5), 1:(q-1))
-  # max_principal_angle = sapply(rs, function(r) mapply(max_principal_angle, estimate$Sigma_hat, Sigma_list_truth, r = r))
-  # rownames(max_principal_angle) = paste0("Sigma_", 1:length(D_list) - 1)
-  # colnames(max_principal_angle) = rs
-  # max_principal_angle = reshape2::melt(max_principal_angle, varnames = c("estimate", "r"))
+  rs = intersect(c(1, 3, 5), 1:(q-1))
+  max_principal_angle = sapply(rs, function(r) mapply(max_principal_angle, estimate$Sigma_hat, Sigma_list_truth, r = r))
+  rownames(max_principal_angle) = paste0("Sigma_", 1:length(D_list) - 1)
+  colnames(max_principal_angle) = rs
+  max_principal_angle = reshape2::melt(max_principal_angle, varnames = c("estimate", "r"))
 
   return(list(
     time = time,
     estimate = estimate,
     Sigma_list_truth = Sigma_list_truth,
-    # truncated = truncated,
+    truncated = truncated,
     min_eigenvalue = min_eigenvalue,
     spectral_error = mapply(spectral_error, estimate$Sigma_hat, Sigma_list_truth),
     squared_error = mapply(squared_error, estimate$Sigma_hat, Sigma_list_truth),
     diag_squared_error = mapply(diag_squared_error, estimate$Sigma_hat, Sigma_list_truth),
-    # max_principal_angle = max_principal_angle,
-    # h2_error = h2_error(estimate$Sigma_hat, Sigma_list_truth),
-    beta_error = beta_error[1, ],
-    r2_error = beta_error[2, ]
+    max_principal_angle = max_principal_angle,
+    h2_error = h2_error(estimate$Sigma_hat, Sigma_list_truth),
+    beta_error = beta_error
   ))
 
 }
