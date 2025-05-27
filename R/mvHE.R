@@ -56,6 +56,11 @@ mvHE = function(Y, D_list, truncate = TRUE) {
       Sigma_k_hat = Sigma_hat[[k]]
       eigen_Sigma_k_hat = eigen(Sigma_k_hat)
       Sigma_hat[[k]] = eigen_Sigma_k_hat$vectors %*% diag(c(pmax(eigen_Sigma_k_hat$values, 0)), ncol(eigen_Sigma_k_hat$vectors), ncol(eigen_Sigma_k_hat$vectors)) %*% t(eigen_Sigma_k_hat$vectors)
+      if (any(eigen_Sigma_k_hat$values < 0)) {
+        attr(Sigma_hat[[k]], "truncated") = TRUE
+      } else {
+        attr(Sigma_hat[[k]], "truncated") = FALSE
+      }
     }
   }
 

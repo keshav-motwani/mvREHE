@@ -160,7 +160,7 @@ vech_to_vec_indices <- function(vech_indices) {
 }
 
 cv_latent_matrix_regression <- function(Y, D_list, outcomes, covariates, rank_seq, lambda_seq, estimator,
-                                        K = 2, folds = NULL, cores = 1, ...) {
+                                        K = 2, folds = NULL, cores = 8, ...) {
 
   require(parallel)
 
@@ -177,8 +177,8 @@ cv_latent_matrix_regression <- function(Y, D_list, outcomes, covariates, rank_se
 
   for (k in 1:K) {
 
-    fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]), return_full = FALSE)
-    fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]), return_full = FALSE)
+    fit_train = estimator(Y[-folds[[k]], ], D_list = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]]))
+    fit_test = estimator(Y[folds[[k]], ], D_list = lapply(D_list, function(D) D[folds[[k]], folds[[k]]]))
 
     for (c in 1:length(D_list)) {
 
