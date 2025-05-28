@@ -94,10 +94,19 @@ add_lowrank_coef_response = function(Sigma, rank, r2, sigma2, covariates) {
   q = length(covariates)
   p = (-1 + sqrt(1 + 8 * q)) / 2
 
-  beta1 = matrix(rnorm(rank * p), ncol = rank)
-  beta2 = beta1
+  desired_beta = eigen(Sigma[covariates, covariates])$vec[, 1]
 
-  beta = get_vec_beta(beta1, beta2)
+  desired_beta_full = numeric(ncol(Sigma))
+  desired_beta_full[covariates] = desired_beta
+
+  A = rbind(diag(1, ncol(Sigma)), t(desired_beta_full))
+  Sigma_yx = A %*% Sigma %*% t(A)
+
+  fit = latent_matrix_regression2(Sigma_yx, ncol(Sigma_yx), covariates, 2, 0.0001)
+
+  # plot(crossprod(diag(1/sqrt(diag(Sigma[covariates, covariates]))) %*% get_vec_beta(fit$beta1, fit$beta2), eigen(Sigma[covariates, covariates])$vec)[1, ])
+
+  beta = get_vec_beta(fit$beta1, fit$beta2)
 
   var_vecx_beta = (t(beta) %*% cov2cor(Sigma[covariates, covariates]) %*% beta)[1]
 
@@ -107,8 +116,8 @@ add_lowrank_coef_response = function(Sigma, rank, r2, sigma2, covariates) {
 
   c = sigma2 / var_y_orig
 
-  beta1 = beta1 * sqrt(sqrt(c))
-  beta2 = beta2 * sqrt(sqrt(c))
+  beta1 = fit$beta1 * sqrt(sqrt(c))
+  beta2 = fit$beta2 * sqrt(sqrt(c))
 
   beta = diag(1 / sqrt(diag(Sigma[covariates, covariates]))) %*% get_vec_beta(beta1, beta2)
   sigma2_e = c * sigma2_e
@@ -120,6 +129,9 @@ add_lowrank_coef_response = function(Sigma, rank, r2, sigma2, covariates) {
 
   Sigma = A %*% Sigma %*% t(A)
   Sigma[ncol(Sigma), ncol(Sigma)] = Sigma[ncol(Sigma), ncol(Sigma)] + sigma2_e
+
+  # print(c(Sigma[ncol(Sigma), ncol(Sigma)], sigma2))
+  # print(c(1 - (Sigma[ncol(Sigma), ncol(Sigma)] - 2 * t(beta) %*% Sigma[covariates, ncol(Sigma)] + t(beta) %*% Sigma[covariates, covariates] %*% beta) / Sigma[ncol(Sigma), ncol(Sigma)], r2))
 
   return(Sigma)
 
@@ -312,7 +324,7 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     for (k in 1:length(Sigma_hat)) {
       eig = eigen(Sigma_hat[[k]][covariates, covariates])
       diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
-      Sigma_hat[[k]] = add_lowrank_coef_response(Sigma_hat[[k]], 2, r2[k], mean(diag(Sigma_hat[[k]][outcomes])), covariates)
+      Sigma_hat[[k]] = add_lowrank_coef_response(Sigma_hat[[k]], 2, r2[k], mean(diag(Sigma_hat[[k]])[outcomes]), covariates)
       attr(Sigma_hat[[k]], "sqrt") = sqrt_matrix(Sigma_hat[[k]])
     }
 

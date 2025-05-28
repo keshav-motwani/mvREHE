@@ -103,6 +103,19 @@ latent_matrix_regression = function(fit, component, outcome, covariates, rank, l
 
 }
 
+latent_matrix_regression2 = function(Sigma_hat, outcome, covariates, rank, lambda, ...) {
+
+  covariates = vech_to_vec_indices(covariates)
+
+  Sigma_hat = Sigma_hat[c(outcome, covariates), c(outcome, covariates)]
+
+  Sigma_hat = cov2cor(Sigma_hat)
+  Sigma_hat[is.na(Sigma_hat)] = 0
+
+  matrix_regression_from_cov(Sigma_hat, NULL, rank, lambda, ...)
+
+}
+
 latent_ridge_regression = function(fit, component, outcome, covariates, lambda) {
 
   if (is.null(fit$V)) {
