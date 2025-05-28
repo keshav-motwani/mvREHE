@@ -89,6 +89,42 @@ generate_smooth_Sigma = function(q, alpha, K = 50) {
 generate_smooth_1_Sigma = function(q) generate_smooth_Sigma(q, 1)
 generate_smooth_2_Sigma = function(q) generate_smooth_Sigma(q, 2)
 
+add_lowrank_coef_response = function(Sigma, rank, r2, sigma2, covariates) {
+
+  q = length(covariates)
+  p = (-1 + sqrt(1 + 8 * q)) / 2
+
+  beta1 = matrix(rnorm(rank * p), ncol = rank)
+  beta2 = beta1
+
+  beta = get_vec_beta(beta1, beta2)
+
+  var_vecx_beta = (t(beta) %*% cov2cor(Sigma[covariates, covariates]) %*% beta)[1]
+
+  sigma2_e = (1 - r2) * var_vecx_beta / r2
+
+  var_y_orig = var_vecx_beta + sigma2_e
+
+  c = sigma2 / var_y_orig
+
+  beta1 = beta1 * sqrt(sqrt(c))
+  beta2 = beta2 * sqrt(sqrt(c))
+
+  beta = diag(1 / sqrt(diag(Sigma[covariates, covariates]))) %*% get_vec_beta(beta1, beta2)
+  sigma2_e = c * sigma2_e
+
+  beta_full = numeric(ncol(Sigma))
+  beta_full[covariates] = beta
+
+  A = rbind(diag(1, ncol(Sigma)), t(beta_full))
+
+  Sigma = A %*% Sigma %*% t(A)
+  Sigma[ncol(Sigma), ncol(Sigma)] = Sigma[ncol(Sigma), ncol(Sigma)] + sigma2_e
+
+  return(Sigma)
+
+}
+
 sqrt_matrix = function(A) {
   eig = eigen(A)
   eig$vec %*% diag(sqrt(pmax(eig$val, 0))) %*% t(eig$vec)
@@ -210,7 +246,7 @@ get_vec_beta = function(beta1, beta2) {
 
 beta_error = function(Y, D_list, fit, estimator, Sigma_true) {
 
-  outcome = 25
+  outcome = 183
   covariates = 92:182
 
   beta_true = lapply(Sigma_true, function(Sigma) {
@@ -230,8 +266,6 @@ beta_error = function(Y, D_list, fit, estimator, Sigma_true) {
 
   beta_error_matrix = sapply(1:3, function(k) sqrt(sum((beta_hat_matrix[[k]] - beta_true[[k]])^2)))
   beta_error_ridge = sapply(1:3, function(k) sqrt(sum((beta_hat_ridge[[k]] - beta_true[[k]])^2)))
-
-  # return(beta_error_ridge)
 
   result = rbind(beta_error_ridge, beta_error_matrix)
   attr(result, "cv_r2") = list(matrix_lambda_rank$cv_r2_full, ridge_lambda$cv_r2_full)
@@ -268,16 +302,17 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
 
   } else {
 
-    outcome = 25
+    outcomes = 1:91
     covariates = 92:182
 
     Sigma_hat = fit$Sigma_hat
-    q = ncol(Sigma_hat[[1]])
 
     cond_num = as.numeric(strsplit(as.character(Sigma), "_")[[1]][2])
+    r2 = c(0.9, 0.9, 0.9)
     for (k in 1:length(Sigma_hat)) {
       eig = eigen(Sigma_hat[[k]][covariates, covariates])
       diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
+      Sigma_hat[[k]] = add_lowrank_coef_response(Sigma_hat[[k]], 2, r2[k], mean(diag(Sigma_hat[[k]][outcomes])), covariates)
       attr(Sigma_hat[[k]], "sqrt") = sqrt_matrix(Sigma_hat[[k]])
     }
 
@@ -291,6 +326,8 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     sqrt_Sigma_0 = attr(Sigma_0, "sqrt")
     sqrt_Sigma_1 = attr(Sigma_1, "sqrt")
     sqrt_Sigma_2 = attr(Sigma_2, "sqrt")
+
+    q = ncol(Sigma_0)
 
   }
 
