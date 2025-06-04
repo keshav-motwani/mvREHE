@@ -350,7 +350,7 @@ cv_latent_ridge_regression = function(Y, D_list, fit, outcomes, covariates, n_la
 
 }
 
-cv_raw_matrix_regression = function(Y, outcomes, covariates, rank_seq, lambda_seq, estimator, folds = NULL, cores = 8) {
+cv_raw_matrix_regression = function(Y, outcomes, covariates, rank_seq, lambda_seq, K = 2, folds = NULL, cores = 8, ...) {
 
   require(parallel)
 
@@ -395,7 +395,7 @@ cv_raw_matrix_regression = function(Y, outcomes, covariates, rank_seq, lambda_se
         r <- rank_seq[r_idx]
         l <- lambda_seq[l_idx]
 
-        fit <- matrix_regression_from_cov(Sigma_hat_train, V_train, r, l, ...)
+        fit <- matrix_regression_from_cov(Sigma_hat_train[c(o, covariates), c(o, covariates)], V_train, r, l, ...)
 
         A <- rbind(
           c(1, rep(0, length(covariates))),
@@ -406,7 +406,7 @@ cv_raw_matrix_regression = function(Y, outcomes, covariates, rank_seq, lambda_se
           A = A %*% V_test
         }
 
-        Sigma <- A %*% Sigma_hat_test %*% t(A)
+        Sigma <- A %*% Sigma_hat_test[c(o, covariates), c(o, covariates)] %*% t(A)
         r2 <- 1 - (Sigma[1, 1] - 2 * Sigma[1, 2] + Sigma[2, 2]) / Sigma[1, 1]
 
         list(o_idx = o_idx, r_idx = r_idx, l_idx = l_idx, r2 = r2)
@@ -421,13 +421,13 @@ cv_raw_matrix_regression = function(Y, outcomes, covariates, rank_seq, lambda_se
   }
 
   # Select best rank/lambda based on max CV R²
-  lambda = matrix(NA, length(D_list), length(outcomes))
-  rank = matrix(NA, length(D_list), length(outcomes))
+  lambda = numeric(length(outcomes))
+  rank = numeric(length(outcomes))
 
     for (o in 1:length(outcomes)) {
       idx = which(cv_r2[o, , , drop = FALSE] == max(cv_r2[o, , ]), arr.ind = TRUE)[1, ]
-      rank[c, o] = rank_seq[idx[2]]
-      lambda[c, o] = lambda_seq[idx[3]]
+      rank[o] = rank_seq[idx[2]]
+      lambda[o] = lambda_seq[idx[3]]
     }
 
   return(list(
