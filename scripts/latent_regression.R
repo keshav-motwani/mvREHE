@@ -236,7 +236,7 @@ cv_latent_matrix_regression <- function(Y, D_list, outcomes, covariates, rank_se
           V_test = NULL
           Sigma_hat_test = Sigma_hat_test[c(o, covariates), c(o, covariates)]
         }
-        Sigma_hat_test = cov2cor(Sigma_hat_test)
+        Sigma_hat_test = diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train)) %*% Sigma_hat_test %*% diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train))
         Sigma_hat_test[is.na(Sigma_hat_test)] = 0
 
         A <- rbind(
@@ -312,7 +312,7 @@ cv_latent_ridge_regression = function(Y, D_list, fit, outcomes, covariates, n_la
       cov_hat[is.na(cov_hat)] = 0
       cov_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
       cov_hat_train[is.na(cov_hat_train)] = 0
-      cov_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
+      cov_hat_test = diag(1 / sqrt(diag(fit_train$Sigma_hat[[component]])), ncol(fit_train$Sigma_hat[[component]])) %*% fit_test$Sigma_hat[[component]] %*% diag(1 / sqrt(diag(fit_train$Sigma_hat[[component]])), ncol(fit_train$Sigma_hat[[component]]))
       cov_hat_test[is.na(cov_hat_test)] = 0
 
       max_eigenvalue = max(eigen(cov_hat)$val)
@@ -350,4 +350,91 @@ cv_latent_ridge_regression = function(Y, D_list, fit, outcomes, covariates, n_la
 
 }
 
+cv_raw_matrix_regression = function(Y, outcomes, covariates, rank_seq, lambda_seq, estimator, folds = NULL, cores = 8) {
 
+  require(parallel)
+
+  if (is.null(folds)) {
+    folds = split(1:nrow(Y), rep(1:K, each = ceiling(nrow(Y) / K)))
+  } else {
+    stopifnot(length(setdiff(1:nrow(Y), unlist(folds))) == 0)
+    stopifnot(length(setdiff(unlist(folds), 1:nrow(Y))) == 0)
+  }
+
+  covariates = vech_to_vec_indices(covariates)
+
+  cv_r2 = array(0, dim = c(length(outcomes), length(rank_seq), length(lambda_seq)))
+
+  for (k in 1:K) {
+
+    Sigma_hat_train = cov(Y[-folds[[k]], ])
+    Sigma_hat_test = cov(Y[folds[[k]], ])
+
+    Sigma_hat_train = cov2cor(Sigma_hat_train)
+    Sigma_hat_test = diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train)) %*% Sigma_hat_test %*% diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train))
+    Sigma_hat_train[is.na(Sigma_hat_train)] = 0
+    Sigma_hat_test[is.na(Sigma_hat_test)] = 0
+
+    V_train = V_test = NULL
+
+
+      # Create full grid of outcome × rank × lambda
+      grid <- expand.grid(
+        o_idx = seq_along(outcomes),
+        r_idx = seq_along(rank_seq),
+        l_idx = seq_along(lambda_seq)
+      )
+
+      results_grid <- mclapply(seq_len(nrow(grid)), function(idx) {
+        row <- grid[idx, ]
+        o_idx <- row$o_idx
+        r_idx <- row$r_idx
+        l_idx <- row$l_idx
+
+        o <- outcomes[o_idx]
+        r <- rank_seq[r_idx]
+        l <- lambda_seq[l_idx]
+
+        fit <- matrix_regression_from_cov(Sigma_hat_train, V_train, r, l, ...)
+
+        A <- rbind(
+          c(1, rep(0, length(covariates))),
+          c(0, c(tcrossprod(fit$beta1, fit$beta2)))
+        )
+
+        if (!is.null(V_test)) {
+          A = A %*% V_test
+        }
+
+        Sigma <- A %*% Sigma_hat_test %*% t(A)
+        r2 <- 1 - (Sigma[1, 1] - 2 * Sigma[1, 2] + Sigma[2, 2]) / Sigma[1, 1]
+
+        list(o_idx = o_idx, r_idx = r_idx, l_idx = l_idx, r2 = r2)
+      }, mc.cores = cores)
+
+      # Accumulate results
+      for (res in results_grid) {
+        cv_r2[res$o_idx, res$r_idx, res$l_idx] <-
+          cv_r2[res$o_idx, res$r_idx, res$l_idx] + res$r2 / K
+      }
+
+  }
+
+  # Select best rank/lambda based on max CV R²
+  lambda = matrix(NA, length(D_list), length(outcomes))
+  rank = matrix(NA, length(D_list), length(outcomes))
+
+    for (o in 1:length(outcomes)) {
+      idx = which(cv_r2[o, , , drop = FALSE] == max(cv_r2[o, , ]), arr.ind = TRUE)[1, ]
+      rank[c, o] = rank_seq[idx[2]]
+      lambda[c, o] = lambda_seq[idx[3]]
+    }
+
+  return(list(
+    lambda = lambda,
+    rank = rank,
+    cv_r2 = pmax(apply(cv_r2, 1, max), 0),
+    cv_r2_full = cv_r2
+  ))
+
+}
