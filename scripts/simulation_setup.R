@@ -263,10 +263,14 @@ beta_error = function(Y, D_list, fit, estimator, Sigma_true) {
 
   beta_true = lapply(Sigma_true, function(Sigma) {
     Sigma = cov2cor(Sigma)
-    solve(Sigma[covariates, covariates], Sigma[covariates, outcome])
+    tryCatch({
+      solve(Sigma[covariates, covariates], Sigma[covariates, outcome])
+    }, error = function(e) {
+      rep(NA, length(covariates))
+    })
   })
 
-  matrix_lambda_rank = cv_latent_matrix_regression(Y, D_list, outcome, covariates, 1:10, 10^seq(1, -3, length.out = 100), estimator)
+  matrix_lambda_rank = cv_latent_matrix_regression(Y, D_list, outcome, covariates, 1:5, 10^seq(2, -3, length.out = 100), estimator)
   ridge_lambda = cv_latent_ridge_regression(Y, D_list, fit, outcome, covariates, 100, estimator)
 
   beta_hat_matrix = lapply(1:length(D_list), function(c) {
@@ -279,7 +283,10 @@ beta_error = function(Y, D_list, fit, estimator, Sigma_true) {
   beta_error_matrix = sapply(1:3, function(k) sqrt(sum((beta_hat_matrix[[k]] - beta_true[[k]])^2)))
   beta_error_ridge = sapply(1:3, function(k) sqrt(sum((beta_hat_ridge[[k]] - beta_true[[k]])^2)))
 
-  result = rbind(beta_error_ridge, beta_error_matrix)
+  r2_matrix = sapply(1:3, function(k) 1 - (Sigma_true[[k]][outcome, outcome] - 2 * t(beta_hat_matrix[[k]]) %*% Sigma_true[[k]][covariates, outcome] + t(beta_hat_matrix[[k]]) %*% Sigma_true[[k]][covariates, covariates] %*% beta_hat_matrix[[k]]) / Sigma_true[[k]][outcome, outcome])
+  r2_ridge = sapply(1:3, function(k) 1 - (Sigma_true[[k]][outcome, outcome] - 2 * t(beta_hat_ridge[[k]]) %*% Sigma_true[[k]][covariates, outcome] + t(beta_hat_ridge[[k]]) %*% Sigma_true[[k]][covariates, covariates] %*% beta_hat_ridge[[k]]) / Sigma_true[[k]][outcome, outcome])
+
+  result = rbind(beta_error_ridge, beta_error_matrix, r2_ridge, r2_matrix)
   attr(result, "cv_r2") = list(matrix_lambda_rank$cv_r2_full, ridge_lambda$cv_r2_full)
 
   return(result)
@@ -322,8 +329,8 @@ simulation = function(components, n, q, Sigma, method, id, replicate, DATA_ANALY
     cond_num = as.numeric(strsplit(as.character(Sigma), "_")[[1]][2])
     r2 = c(0.9, 0.9, 0.9)
     for (k in 1:length(Sigma_hat)) {
-      eig = eigen(Sigma_hat[[k]][covariates, covariates])
-      diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
+      # eig = eigen(Sigma_hat[[k]][covariates, covariates])
+      # diag(Sigma_hat[[k]])[covariates] = diag(Sigma_hat[[k]])[covariates] + eig$val[1] / (cond_num - 1)
       Sigma_hat[[k]] = add_lowrank_coef_response(Sigma_hat[[k]], 2, r2[k], mean(diag(Sigma_hat[[k]])[outcomes]), covariates)
       attr(Sigma_hat[[k]], "sqrt") = sqrt_matrix(Sigma_hat[[k]])
     }
