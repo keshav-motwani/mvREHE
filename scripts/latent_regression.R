@@ -236,7 +236,7 @@ cv_latent_matrix_regression <- function(Y, D_list, outcomes, covariates, rank_se
           V_test = NULL
           Sigma_hat_test = Sigma_hat_test[c(o, covariates), c(o, covariates)]
         }
-        Sigma_hat_test = diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train)) %*% Sigma_hat_test %*% diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train))
+        Sigma_hat_test = cov2cor(Sigma_hat_test)
         Sigma_hat_test[is.na(Sigma_hat_test)] = 0
 
         A <- rbind(
@@ -312,7 +312,7 @@ cv_latent_ridge_regression = function(Y, D_list, fit, outcomes, covariates, n_la
       cov_hat[is.na(cov_hat)] = 0
       cov_hat_train = cov2cor(fit_train$Sigma_hat[[component]])
       cov_hat_train[is.na(cov_hat_train)] = 0
-      cov_hat_test = diag(1 / sqrt(diag(fit_train$Sigma_hat[[component]])), ncol(fit_train$Sigma_hat[[component]])) %*% fit_test$Sigma_hat[[component]] %*% diag(1 / sqrt(diag(fit_train$Sigma_hat[[component]])), ncol(fit_train$Sigma_hat[[component]]))
+      cov_hat_test = cov2cor(fit_test$Sigma_hat[[component]])
       cov_hat_test[is.na(cov_hat_test)] = 0
 
       max_eigenvalue = max(eigen(cov_hat)$val)
@@ -367,11 +367,9 @@ cv_raw_matrix_regression = function(Y, outcomes, covariates, rank_seq, lambda_se
 
   for (k in 1:K) {
 
-    Sigma_hat_train = cov(Y[-folds[[k]], ])
-    Sigma_hat_test = cov(Y[folds[[k]], ])
+    Sigma_hat_train = cor(Y[-folds[[k]], ])
+    Sigma_hat_test = cor(Y[folds[[k]], ])
 
-    Sigma_hat_train = cov2cor(Sigma_hat_train)
-    Sigma_hat_test = diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train)) %*% Sigma_hat_test %*% diag(1 / sqrt(diag(Sigma_hat_train)), ncol(Sigma_hat_train))
     Sigma_hat_train[is.na(Sigma_hat_train)] = 0
     Sigma_hat_test[is.na(Sigma_hat_test)] = 0
 
