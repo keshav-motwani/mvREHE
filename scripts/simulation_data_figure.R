@@ -1,8 +1,8 @@
 library(tidyverse)
 
 SIMULATION_ID = "data"
-COMPONENTS = as.numeric(commandArgs(trailingOnly=TRUE)[1])
-RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
+COMPONENTS = 3 # as.numeric(commandArgs(trailingOnly=TRUE)[1])
+RESULT_PATH = paste0("simulation_FINAL_FINAL_FINAL_ALL_", COMPONENTS, "_components_", SIMULATION_ID)
 FIGURES_PATH = file.path(RESULT_PATH, "figures")
 dir.create(FIGURES_PATH, recursive = TRUE)
 
@@ -12,296 +12,202 @@ names(map) = methods
 
 palette = ggsci::pal_aaas("default")(3)
 names(palette) = c("HE", "REHE", "REML")
-# options(ggplot2.discrete.colour = palette)
-
-Sigmas = "data_100" # c("data_1.01", "data_10", "data_100", "data_1000", "data_10000")
-Sigma_labels = "data" # paste0("cond == ", unlist(lapply(strsplit(Sigmas, "_"), `[[`, 2)))
-names(Sigma_labels) = Sigmas
 
 files = list.files(RESULT_PATH, full.names = TRUE)
 files = files[grepl("rds", files)]
 
 results = lapply(files, readRDS)
 
-### Time
-palette1 = palette
-
 time_df = do.call(rbind, lapply(results, function(x) x$time)) %>%
   group_by(n, q, Sigma, experiment, method) %>%
   summarize(mean = mean(na.rm = TRUE, time), se = sd(na.rm = TRUE, time) / sqrt(n())) %>%
-  filter(method %in% methods)
+  filter(method %in% methods) %>%
+  filter(experiment == "n") %>%
+  mutate(y = log10(mean),
+         ymax = log10(mean + 1.96 * se),
+         ymin = log10(mean - 1.96 * se),
+         color = factor(map[method], levels = names(palette)),
+         linetype = factor(ifelse(grepl("mv", method), "Multivariate", "Univariate")))
 
-time = ggplot(time_df %>%
-         filter(experiment == "n") %>%
-         mutate(facet = Sigma_labels[Sigma]),
-       aes(x = n, y = log10(mean), ymax = log10(mean + 1.96 * se), ymin = log10(mean - 1.96 * se),
-           color = factor(map[method], levels = names(palette1)),
-           linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"))) +
-#  facet_wrap(~facet, scales = "fixed", nrow = 1) +
+time = ggplot(time_df,
+       aes(x = n, y = y, ymax = ymax, ymin = ymin, color = color, linetype = linetype)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
-  xlab(NULL) +
-  labs(color = "Method", linetype = "", y = "log10(seconds)") +
   theme(legend.position = "bottom") +
-#  theme(strip.background = element_blank(), strip.placement = "outside", plot.margin = unit(c(5 / 72.27, 2.5, 5 / 72.27, 2.5), "in")) + 
-  scale_color_manual(values = palette1)
-print(time)
-print("time")
-### Squared error on diagonal
+  labs(color = "Method", linetype = "", y = "log10(seconds)") +
+  scale_color_manual(values = palette)
 
 label = c("hat(Sigma)[G]", "hat(Sigma)[C]", "hat(Sigma)[E]")
 names(label) = c("Sigma_1", "Sigma_2", "Sigma_0")
 
-Sigmas = apply(expand.grid(label, Sigma_labels), 1, function(x) paste0(x[2], "~(", x[1], ")"))
+Sigma_list_truth = readRDS("data_analysis_3_components_10ROI/fit.rds")$Sigma_hat
+indices = which(diag(Sigma_list_truth[[1]]) > 1e-14)
+h2_truth = sapply(indices, function(j) Sigma_list_truth[[2]][j, j] / sum(sapply(Sigma_list_truth, function(Sigma) Sigma[j, j])))
 
-diag_squared_error_df = do.call(rbind, lapply(results, function(x) x$diag_squared_error)) %>%
-  mutate(estimate = label[as.character(estimate)]) %>%
-  filter(method %in% methods)
+h2 = lapply(results, function(result) {
+  Sigma_list_estimate = result$output$estimate$Sigma_hat
+  h2_estimate = sapply(indices, function(j)
+    Sigma_list_estimate[[2]][j, j] / sum(sapply(Sigma_list_estimate, function(Sigma)
+      Sigma[j, j])))
+  cbind(result$h2_error[, -2], h2_error = sqrt(sum(h2_truth - h2_estimate)^2))
+})
 
-ggplot(diag_squared_error_df %>%
-         filter(experiment == "n") %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, diag_squared_error), se = sd(na.rm = TRUE, diag_squared_error) / sqrt(n())),
-       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
-  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
-  geom_line() +
-  geom_errorbar(width = 0.1) +
-  theme_bw() +
-  xlab("n") +
-  labs(color = "Method", y = expression("||diag("*hat(Sigma)[k] - Sigma[k]*")||"[2]), x = "n") +   theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA))
-ggsave(file.path(FIGURES_PATH, "simulation_figure_diag_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
-
-### h2 error
-
-h2_df = do.call(rbind, lapply(results, function(x) x$h2_error)) %>%
+h2_df = do.call(rbind, h2) %>%
   group_by(n, q, Sigma, experiment, method) %>%
   summarize(mean = mean(na.rm = TRUE, h2_error), se = sd(na.rm = TRUE, h2_error) / sqrt(n())) %>%
-  filter(method %in% methods)
+  filter(method %in% methods) %>%
+  filter(experiment == "n")
 
-h2 = ggplot(h2_df %>%
-         filter(experiment == "n") %>%
-         mutate(facet = Sigma_labels[Sigma]),
+ggplot(h2_df,
        aes(x = n, y = sqrt(mean), ymin = sqrt(mean - 1.96 * se), ymax = sqrt(mean + 1.96 * se),
-           color = factor(map[method], levels = names(palette1)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
-#  facet_wrap(~facet, scales = "free_y", nrow = 1) +
+           color = factor(map[method], levels = names(palette)), linetype = ifelse(grepl("mv", method), "Multivariate", "Univariate"), group = method)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
-  xlab(NULL) +
-  labs(color = "Method", linetype = "", y = expression("||"*hat(h)^2 - h^2*"||"[2])) +
-  theme(legend.position = "none") +
+  theme(legend.position = "bottom") +
   theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_color_manual(values = palette1) +
-  guides(linetype="none", color = "none")
+  labs(color = "Method", linetype = "", y = expression("||"*hat(h)^2 - h^2*"||"[2])) +
+  scale_color_manual(values = palette)
 
-### Spectral error
+ggsave(file.path(FIGURES_PATH, "simulation_figure_h2_n.pdf"), height = 3.5, width = 6)
 
-names(palette) = paste0("mv", names(palette))
-# options(ggplot2.discrete.colour = palette)
+palette_mv = palette
+names(palette_mv) = paste0("mv", names(palette_mv))
 
 spectral_error_df = do.call(rbind, lapply(results, function(x) x$spectral_error)) %>%
   mutate(estimate = label[as.character(estimate)]) %>%
-  filter(method %in% methods)
+  filter(method %in% methods)  %>%
+  filter(experiment == "n" & grepl("mv", method)) %>%
+  mutate(facet = estimate) %>%
+  mutate(facet = factor(facet, levels = label)) %>%
+  group_by(n, facet, method) %>%
+  summarize(mean = mean(na.rm = TRUE, spectral_error), se = sd(na.rm = TRUE, spectral_error) / sqrt(n()))
 
-ggplot(spectral_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, spectral_error), se = sd(na.rm = TRUE, spectral_error) / sqrt(n())),
+ggplot(spectral_error_df,
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(method, levels = names(palette)))) +
+           color = factor(method, levels = names(palette_mv)))) +
   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
   xlab("n") +
   labs(color = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[2]), x = "n") +
-  theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
+  theme(legend.position = "bottom", strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
-  scale_color_manual(values = palette)
-ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 3, width = 8.5)
+  scale_color_manual(values = palette_mv)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_spectral_error_n.pdf"), height = 3.5, width = 8.5)
 
 
 spectral = ggplot(spectral_error_df %>%
-         filter(experiment == "n" & grepl("mv", method), estimate == label[1]) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, spectral_error), se = sd(na.rm = TRUE, spectral_error) / sqrt(n())),
+         filter(facet == label[1]),
        aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(method, levels = names(palette)))) +
-#  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
+           color = factor(method, levels = names(palette_mv)))) +
   geom_line() +
   geom_errorbar(width = 0.1) +
   theme_bw() +
-  xlab(NULL) +
   labs(color = "Method", y = expression("||"*hat(Sigma)[G] - Sigma[G]*"||"[2])) +
-  theme(legend.position = "none") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
+  theme(legend.position = "none", strip.background = element_blank(), strip.placement = "outside") +
   scale_y_continuous(limits = c(NA, NA)) +
-  scale_color_manual(values = palette) +
+  scale_color_manual(values = palette_mv) +
   guides(linetype="none", color = "none")
-  
 
+pseudoinverse = function(mat) {
+  eig = eigen(mat)
+  r = sum(eig$val > 1e-12)
+  eig$vec[, 1:r] %*% diag(1/eig$val[1:r]) %*% t(eig$vec[, 1:r])
+}
 
-### Squared error
+cov2cor_NA0 = function(cov) {
+  cov_hat = cov2cor(cov)
+  cov_hat[diag(cov) < .Machine$double.eps, ] = 0
+  cov_hat[, diag(cov) < .Machine$double.eps] = 0
+  cov_hat
+}
 
-squared_error_df = do.call(rbind, lapply(results, function(x) x$squared_error)) %>%
-  mutate(estimate = label[as.character(estimate)]) %>%
-  filter(method %in% methods)
+fit = readRDS(file.path("data_analysis_3_components_10ROI/", "fit.rds"))
+outcomes = setdiff(1:55, c(1, cumsum(10:1) + 1))
+covariates = 56:110
 
-ggplot(squared_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, squared_error), se = sd(na.rm = TRUE, squared_error) / sqrt(n())),
-       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
+r2_true = sapply(1:length(fit$Sigma_hat), function(k) {
+  Sigma = cov2cor_NA0(fit$Sigma_hat[[k]])
+  sapply(outcomes, function(outcome) {
+    beta = pseudoinverse(Sigma[covariates, covariates]) %*% Sigma[outcome, covariates]
+    r2 = 1 - (Sigma[outcome, outcome] -
+                2 * Sigma[outcome, covariates] %*% beta +
+                t(beta) %*% Sigma[covariates, covariates] %*% beta) /
+      Sigma[outcome, outcome]
+    r2
+  })
+})
+r2_true = cbind(reshape2::melt(r2_true), outcome = outcomes)
+r2_true$estimate = paste0("Sigma_", r2_true$Var2 - 1)
+r2_true$r2_true = r2_true$value
+r2_true = r2_true[, 4:6]
+
+r2_beta_hat = lapply(results, function(x) x$r2_beta_hat)
+r2_beta_hat = r2_beta_hat[lengths(sapply(r2_beta_hat, colnames)) == 11]
+r2_beta_hat = do.call(rbind, r2_beta_hat)
+r2_beta_hat = left_join(r2_beta_hat, r2_true, by = c("estimate", "outcome")) %>% mutate(r2 = r2/r2_true) 
+r2_beta_hat$estimate = factor(label[r2_beta_hat$estimate], levels = label)
+
+r2_beta_hat_per_method = r2_beta_hat %>%
+  group_by(n, estimate, method, regression_method, outcome) %>%
+  summarize(r2 = mean(r2)) %>% 
+  group_by(n, estimate, method, regression_method) %>% 
+  summarize(r2 = mean(r2)) %>%
+  mutate(regression_method = factor(regression_method, levels = c("matrix", "lasso", "ridge")))
+
+ggplot(r2_beta_hat_per_method,
+       aes(
+         x = n,
+         y = r2,
+         color = method,
+         shape = regression_method
+       )) +
+  facet_wrap(~estimate,
+             scales = "free",
+             labeller = labeller(estimate = label_parsed)) +
   geom_line() +
-  geom_errorbar(width = 0.1) +
+  geom_point() +
   theme_bw() +
-  xlab("n") +
-  labs(color = "Method", y = expression("||"*hat(Sigma)[k] - Sigma[k]*"||"[F]), x = "n") +
-  theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA))
-ggsave(file.path(FIGURES_PATH, "simulation_figure_squared_error_n.pdf"), height = 7.5 * 0.8, width = 8.5)
+  theme(
+    legend.position = "bottom",
+    strip.background = element_blank(),
+    strip.placement = "outside"
+  ) +
+  scale_color_manual(values = palette_mv) +
+  labs(color = "Method", shape = "Regression Method") +
+  ylab(expression(
+    "Average " *
+      frac(R[kj]^"2*" * "(" * hat(beta)[kj] * ")", R[kj]^"2*" * "(" * beta[kj]^"*" * ")") * " across " * j %in% F
+  ))
+ggsave(file.path(FIGURES_PATH, "simulation_figure_r2_n.pdf"), height = 3.5, width = 8.5)
 
 
-### Regression coefficients error
-
-#palette = ggsci::pal_aaas("default")(3)
-#names(palette) = c("HE", "REHE", "REML")
-#options(ggplot2.discrete.colour = palette)
-
-beta_error_df = do.call(rbind, lapply(results, function(x) x$beta_error)) %>%
-  mutate(estimate = label[as.character(estimate)]) %>%
-  filter(method %in% methods)
-
-ggplot(beta_error_df %>%
-         filter(experiment == "n" & grepl("mv", method)) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, beta_error), se = sd(na.rm = TRUE, beta_error) / sqrt(n())),
-       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[method], levels = names(palette1)), linetype = factor(ifelse(grepl("mv", method), "Multivariate", "Univariate"), levels = c("Multivariate", "Univariate")), group = method)) +
-  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
+r2 = ggplot(
+  r2_beta_hat_per_method %>%
+    filter(estimate == label[1]),
+  aes(
+    x = n,
+    y = r2,
+    color = method,
+    shape = regression_method
+  )
+) +
   geom_line() +
-  geom_errorbar(width = 0.1) +
+  geom_point() +
   theme_bw() +
-  xlab("n") +
-  labs(color = "Method", linetype = "", y = expression("||"*hat(beta)[k] - beta[k]*"||"[2]), x = "n") +
-  theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA)) +
-  scale_color_manual(values = palette1)
-ggsave(file.path(FIGURES_PATH, "simulation_figure_beta_error_n.pdf"), height = 3, width = 8.5)
+  scale_color_manual(values = palette_mv) +
+  ylab(expression(
+    "Average " * frac(R[Gj]^"2*" * "(" * hat(beta)[Gj] * ")", R[Gj]^"2*" * "(" * beta[Gj]^"*" * ")") * " across " * j %in% F
+  )) +
+  guides(color = "none") +
+  labs(shape = "Regression Method")
 
-
-beta = ggplot(beta_error_df %>%
-         filter(experiment == "n" & grepl("mv", method), estimate == label[1]) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, beta_error), se = sd(na.rm = TRUE, beta_error) / sqrt(n())),
-       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[method], levels = names(palette1)), linetype = factor(ifelse(grepl("mv", method), "Multivariate", "Univariate"), levels = c("Multivariate", "Univariate")), group = method)) +
-#   facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
-  geom_line() +
-  geom_errorbar(width = 0.1) +
-  theme_bw() +
-  xlab("n") +
-  labs(color = "Method", linetype = "", y = expression("||"*hat(beta)[G] - beta[G]*"||"[2])) +
-  theme(legend.position = "none") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA)) +
-  guides(linetype="none", color = "none") +
-  scale_color_manual(values = palette1)
-
-### Max principal angle
-
-max_principal_angle_df = do.call(rbind, lapply(results, function(x) x$max_principal_angle)) %>%
-  mutate(estimate = label[as.character(estimate)], value = 1 - cos(value * pi / 180)) %>%
-  filter(method %in% methods)
-
-ggplot(max_principal_angle_df %>%
-         filter(experiment == "n" & grepl("mv", method) & r == 1) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, value), se = sd(na.rm = TRUE, value) / sqrt(n())),
-       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[method], levels = names(palette1)), linetype = factor(ifelse(grepl("mv", method), "Multivariate", "Univariate"), levels = c("Multivariate", "Univariate")), group = method)) +
-  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
-  geom_line() +
-  geom_errorbar(width = 0.1) +
-  theme_bw() +
-  xlab("n") +
-  labs(color = "Method", linetype = "", y = "Cosine error of\ndisentangled PC 1", x = "n") +
-  theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA)) +
-  scale_color_manual(values = palette1)
-ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_1_n.pdf"), height = 3, width = 8.5)
-
-cos = ggplot(max_principal_angle_df %>%
-         filter(experiment == "n" & grepl("mv", method) & r == 1, estimate == label[1]) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, value), se = sd(na.rm = TRUE, value) / sqrt(n())),
-       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(map[method], levels = names(palette1)), linetype = factor(ifelse(grepl("mv", method), "Multivariate", "Univariate"), levels = c("Multivariate", "Univariate")), group = method)) +
-#  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
-  geom_line() +
-  geom_errorbar(width = 0.1) +
-  theme_bw() +
-  xlab(NULL) +
-  labs(color = "Method", linetype = "", y = "Cosine error of\ngenetic PC 1", x = NULL) +
-  theme(legend.position = "none") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA)) +
-  guides(linetype="none", color = "none") +
-  scale_color_manual(values = palette1)
-
-
-ggplot(max_principal_angle_df %>%
-         filter(experiment == "n" & grepl("mv", method) & r == 3) %>%
-         mutate(facet = paste0(Sigma_labels[Sigma], "~(", estimate, ")")) %>%
-         mutate(facet = factor(facet, levels = Sigmas)) %>%
-         group_by(n, facet, method) %>%
-         summarize(mean = mean(na.rm = TRUE, value), se = sd(na.rm = TRUE, value) / sqrt(n())),
-       aes(x = n, y = mean, ymax = mean + 1.96 * se, ymin = mean - 1.96 * se,
-           color = factor(method, levels = names(palette)))) +
-  facet_wrap(~facet, scales = "free_y", ncol = COMPONENTS, dir = "h", labeller = labeller(facet = label_parsed)) +
-  geom_line() +
-  geom_errorbar(width = 0.1) +
-  theme_bw() +
-  xlab("n") +
-  labs(color = "Method", y = "Principal angle - 3 PCs", x = "n") +
-  theme(legend.position = "bottom") +
-  theme(strip.background = element_blank(), strip.placement = "outside") +
-  scale_y_continuous(limits = c(NA, NA))
-ggsave(file.path(FIGURES_PATH, "simulation_figure_max_principal_angle_3_n.pdf"), height = 7.5 * 0.8, width = 8.5)
-print("combined")
-print(time)
-print("time")
-design = "ABC
-          DE#"
-patchwork::wrap_plots(A = time, B = spectral, C = h2, D = cos, E = beta, design = design) +
-  patchwork::plot_annotation(tag_levels = list(c("a", "b", "c", "d", "e", ""))) +
+patchwork::wrap_plots(time, spectral, r2) +
+  patchwork::plot_annotation(tag_levels = list(c("a", "b", "c"))) +
   patchwork::plot_layout(guides = "collect") &
   theme(legend.position =  "bottom")
 
-ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 4, width = 8.5)
+ggsave(file.path(FIGURES_PATH, "simulation_figure_combined_n.pdf"), height = 3.5, width = 10)

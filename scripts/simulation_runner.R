@@ -1,13 +1,13 @@
 source("scripts/simulation_setup.R")
 
-SIMULATION_ID = commandArgs(trailingOnly=TRUE)[1]
-COMPONENTS = commandArgs(trailingOnly=TRUE)[2]
+SIMULATION_ID = "data" # commandArgs(trailingOnly=TRUE)[1]
+COMPONENTS = 3 # commandArgs(trailingOnly=TRUE)[2]
 
-RESULT_PATH = paste0("simulation_", COMPONENTS, "_components_", SIMULATION_ID)
-DATA_ANALYSIS_RESULT_PATH = "data_analysis_3_components_68ROI_cov/" # paste0("data_analysis_", COMPONENTS, "_components")
+RESULT_PATH = paste0("simulation_FINAL_FINAL_FINAL_ALL_", COMPONENTS, "_components_", SIMULATION_ID)
+DATA_ANALYSIS_RESULT_PATH = "data_analysis_3_components_10ROI/" # paste0("data_analysis_", COMPONENTS, "_components")
 dir.create(RESULT_PATH, recursive = TRUE)
 
-replicates = 1:50
+replicates = 1:100
 
 if (SIMULATION_ID == "lowdim1") { # 5000 or 5900 with GEMMA
   methods = c("mvHE", "mvREHE", "mvREML", "HE", "REHE", "REML")
@@ -38,14 +38,14 @@ if (SIMULATION_ID == "lowdim1") { # 5000 or 5900 with GEMMA
   ns = c(500, 1000, 2000, 4000, 8000)
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 } else if (SIMULATION_ID == "data") { # 1250
-  methods = c("mvHE", "mvREHE", "HE", "REHE", "REML")
-  Sigmas = "data_100"
+  methods = c("mvHE", "HE", "mvREHE", "REHE", "REML")
+  Sigmas = "data"
   ns = c(500, 1000, 2000, 4000, 8000)
   qs = NA
   grid = expand.grid(method = methods, replicate = replicates, n = ns, q = qs, Sigma = Sigmas, experiment = "n")
 }
 
-PARAMETER_ID = as.numeric(commandArgs(trailingOnly=TRUE)[3])
+PARAMETER_ID = 1 # as.numeric(commandArgs(trailingOnly=TRUE)[3])
 print(grid[PARAMETER_ID, ])
 replicate = grid[PARAMETER_ID, "replicate"]
 n = grid[PARAMETER_ID, "n"]
@@ -54,6 +54,7 @@ Sigma = grid[PARAMETER_ID, "Sigma"]
 method = as.character(grid[PARAMETER_ID, "method"])
 experiment = grid[PARAMETER_ID, "experiment"]
 
+debugonce(h2_error)
 output = simulation(COMPONENTS, n, q, Sigma, method, SIMULATION_ID, replicate, DATA_ANALYSIS_RESULT_PATH)
 estimate = paste0("Sigma_", 1:COMPONENTS - 1)
 
@@ -61,11 +62,11 @@ diag_squared_error = data.frame(replicate = replicate, estimate = estimate, diag
 squared_error = data.frame(replicate = replicate, estimate = estimate, squared_error = output$squared_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 spectral_error = data.frame(replicate = replicate, estimate = estimate, spectral_error = output$spectral_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 h2_error = data.frame(replicate = replicate, h2_error = output$h2_error, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
-beta_error = data.frame(replicate = replicate, estimate = rep(estimate, each = 4), beta_error = c(output$beta_error), n = n, q = q, Sigma = Sigma, method = method, regression_method = c("ridge", "tensor"), metric = rep(c("beta_error", "r2"), each = 2), experiment = experiment, SIMULATION_ID = SIMULATION_ID)
+r2_beta_hat = cbind(replicate = replicate, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID, output$r2_beta_hat)
 max_principal_angle = cbind(output$max_principal_angle, replicate = replicate, n = n, q = q, Sigma = Sigma, method = method, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 time = data.frame(replicate = replicate, method = method, time = output$time, n = n, q = q, Sigma = Sigma, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 truncated = data.frame(estimate = estimate, truncated = output$truncated, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 min_eigenvalue = data.frame(estimate = estimate, min_eigenvalue = output$min_eigenvalue, n = n, q = q, Sigma = Sigma, method = method, replicate = replicate, experiment = experiment, SIMULATION_ID = SIMULATION_ID)
 
-saveRDS(list(output = output, diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
-print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, beta_error = beta_error, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))
+saveRDS(list(output = output, diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, r2_beta_hat = r2_beta_hat, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue), file.path(RESULT_PATH, paste0("n", n, "_q", q, "_Sigma", Sigma, "_replicate", replicate, "_experiment", experiment, "_method", method, ".rds")))
+print(list(diag_squared_error = diag_squared_error, squared_error = squared_error, spectral_error = spectral_error, h2_error = h2_error, r2_beta_hat = r2_beta_hat, max_principal_angle = max_principal_angle, time = time, truncated = truncated, min_eigenvalue = min_eigenvalue))

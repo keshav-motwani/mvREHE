@@ -96,6 +96,7 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, r
 
     if (return_full) {
       result$Sigma_hat = lapply(Sigma_list, function(Sigma_r) s$v %*% Sigma_r %*% t(s$v))
+      result$V = NULL
     }
 
   } else {
