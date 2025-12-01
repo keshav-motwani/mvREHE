@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // loss
-double loss(const arma::mat Y, const List& D_list, const List& Sigma_list, const arma::vec row_indices, const arma::vec col_indices, arma::vec lambda);
-RcppExport SEXP _mvREHE_loss(SEXP YSEXP, SEXP D_listSEXP, SEXP Sigma_listSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP, SEXP lambdaSEXP) {
+double loss(const arma::mat Y, const List& D_list, const List& Sigma_list, const arma::vec row_indices, const arma::vec col_indices);
+RcppExport SEXP _mvREHE_loss(SEXP YSEXP, SEXP D_listSEXP, SEXP Sigma_listSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,23 +22,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const List& >::type Sigma_list(Sigma_listSEXP);
     Rcpp::traits::input_parameter< const arma::vec >::type row_indices(row_indicesSEXP);
     Rcpp::traits::input_parameter< const arma::vec >::type col_indices(col_indicesSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type lambda(lambdaSEXP);
-    rcpp_result_gen = Rcpp::wrap(loss(Y, D_list, Sigma_list, row_indices, col_indices, lambda));
-    return rcpp_result_gen;
-END_RCPP
-}
-// loss_DR
-double loss_DR(const arma::mat Yr, const List& D_list, const List& Sigma_r_list, const arma::vec row_indices, const arma::vec col_indices);
-RcppExport SEXP _mvREHE_loss_DR(SEXP YrSEXP, SEXP D_listSEXP, SEXP Sigma_r_listSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat >::type Yr(YrSEXP);
-    Rcpp::traits::input_parameter< const List& >::type D_list(D_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type Sigma_r_list(Sigma_r_listSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type row_indices(row_indicesSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type col_indices(col_indicesSEXP);
-    rcpp_result_gen = Rcpp::wrap(loss_DR(Yr, D_list, Sigma_r_list, row_indices, col_indices));
+    rcpp_result_gen = Rcpp::wrap(loss(Y, D_list, Sigma_list, row_indices, col_indices));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -73,8 +57,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 6},
-    {"_mvREHE_loss_DR", (DL_FUNC) &_mvREHE_loss_DR, 5},
+    {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 5},
     {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 5},
     {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 5},
     {NULL, NULL, 0}

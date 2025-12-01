@@ -2,7 +2,6 @@
 #'
 #' @param Y
 #' @param D_list
-#' @param lambda
 #' @param tolerance
 #' @param max_iter
 #' @param Sigma_init_list
@@ -15,7 +14,7 @@
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, return_full = TRUE, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
+mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TRUE, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -34,7 +33,6 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, r
 
   }
 
-  if (is.null(lambda)) lambda = rep(0, K)
   if (is.null(Sigma_init_list)) {
     Sigma_list = lapply(1:length(D_list), function(i) matrix(0, q, q))
   } else if (is.character(Sigma_init_list) && Sigma_init_list == "mvHE") {
@@ -68,11 +66,11 @@ mvREHE = function(Y, D_list, lambda = NULL, tolerance = 1e-6, max_iter = 1000, r
         mat = mat - Sigma_list[[k]] * Q[k, z]
       }
       eig = eigen(mat)
-      Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(c(eig$values) / (Q[z, z] + (lambda[z] * n^2)), 0))
+      Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(c(eig$values) / Q[z, z], 0))
     }
 
     if (!is.null(tolerance)) {
-      # objective[iter] = loss(Y, D_list, Sigma_list, lambda, row_indices, col_indices)
+      # objective[iter] = loss(Y, D_list, Sigma_list, row_indices, col_indices)
       # if (iter > 1 && abs(objective[iter - 1] - objective[iter]) / objective[iter - 1] < tolerance) {
       #   break
       # }

@@ -6,7 +6,7 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-double loss(const arma::mat Y, const List & D_list, const List & Sigma_list, const arma::vec row_indices, const arma::vec col_indices, arma::vec lambda) {
+double loss(const arma::mat Y, const List & D_list, const List & Sigma_list, const arma::vec row_indices, const arma::vec col_indices) {
 
   double value = 0;
 
@@ -47,53 +47,7 @@ double loss(const arma::mat Y, const List & D_list, const List & Sigma_list, con
   for (R_xlen_t k = 0; k < K; k++) {
     NumericMatrix Sigma_ = Sigma_list[k];
     arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false) ;
-    value += lambda(k) * arma::accu(arma::square(Sigma));
   }
-
-  return value;
-
-}
-
-// [[Rcpp::export]]
-double loss_DR(const arma::mat Yr, const List & D_list, const List & Sigma_r_list, const arma::vec row_indices, const arma::vec col_indices) {
-
-  double value = 0;
-
-  R_xlen_t K = D_list.size();
-  R_xlen_t r = Yr.n_cols;
-  R_xlen_t s = row_indices.size();
-
-  arma::mat YtY(r, r, arma::fill::zeros);
-  arma::mat wSigma(r, r, arma::fill::zeros);
-
-  int j = 0;
-  int m = 0;
-
-  for (R_xlen_t i = 0; i < s; i++) {
-
-    j = row_indices(i);
-    m = col_indices(i);
-
-    YtY = Yr.row(j).t() * Yr.row(m);
-
-    wSigma.zeros();
-    for (R_xlen_t k = 0; k < K; k++) {
-      NumericMatrix Sigma_ = Sigma_r_list[k];
-      arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false);
-      NumericMatrix D_ = D_list[k];
-      arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
-      wSigma += D(j, m) * Sigma;
-    }
-
-    if (j == m) {
-      value += arma::accu(arma::square(wSigma)) - 2 * arma::accu(YtY.t() % wSigma);
-    } else {
-      value += 2 * (arma::accu(arma::square(wSigma)) - 2 * arma::accu(YtY.t() % wSigma));
-    }
-
-  }
-
-  value = value / (Yr.n_rows * Yr.n_rows);
 
   return value;
 
