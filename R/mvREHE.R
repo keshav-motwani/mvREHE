@@ -14,7 +14,7 @@
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TRUE, Sigma_init_list = NULL, W_list = NULL, Q = NULL, row_indices = NULL, col_indices = NULL) {
+mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TRUE, Sigma_init_list = NULL) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
@@ -40,19 +40,16 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
   } else {
     Sigma_list = Sigma_init_list
   }
-  if (is.null(row_indices) && (!is.null(tolerance) | is.null(W_list))) {
-    indices = abs(Reduce(`+`, D_list)) > .Machine$double.eps
-    indices = indices & lower.tri(indices, diag = TRUE)
-    row_indices = which(indices, arr.ind = TRUE)[, 1] - 1
-    col_indices = which(indices, arr.ind = TRUE)[, 2] - 1
-  }
-  if (is.null(W_list)) {
-    W_list = lapply(1:K, function(x) matrix(0, q, q))
-    compute_W_list(Y, D_list, W_list, row_indices, col_indices)
-  }
-  if (is.null(Q)) {
-    Q = compute_Q(D_list)
-  }
+
+  indices = abs(Reduce(`+`, D_list)) > .Machine$double.eps
+  indices = indices & lower.tri(indices, diag = TRUE)
+  row_indices = which(indices, arr.ind = TRUE)[, 1] - 1
+  col_indices = which(indices, arr.ind = TRUE)[, 2] - 1
+
+  W_list = lapply(1:K, function(x) matrix(0, q, q))
+  compute_W_list(Y, D_list, W_list, row_indices, col_indices)
+
+  Q = compute_Q(D_list)
 
   for (iter in 1:max_iter) {
 
@@ -104,53 +101,6 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
   }
 
   return(result)
-
-}
-
-precompute_cv = function(Y, D_list, folds, compute_W = TRUE, V_function = NULL, r = NULL) {
-
-  K = length(folds)
-  q = ncol(Y)
-
-  D_list_mk_list = vector(mode = "list", length = K)
-  W_list_mk_list = vector(mode = "list", length = K)
-  Q_mk_list = vector(mode = "list", length = K)
-  D_list_k_list = vector(mode = "list", length = K)
-  row_indices_mk_list = vector(mode = "list", length = K)
-  col_indices_mk_list = vector(mode = "list", length = K)
-  row_indices_k_list = vector(mode = "list", length = K)
-  col_indices_k_list = vector(mode = "list", length = K)
-  V_mk_list = vector(mode = "list", length = K)
-  for (k in 1:K) {
-    D_list_k_list[[k]] = lapply(D_list, function(D) D[folds[[k]], folds[[k]]])
-    D_list_mk_list[[k]] = lapply(D_list, function(D) D[-folds[[k]], -folds[[k]]])
-    Q_mk_list[[k]] = compute_Q(D_list_mk_list[[k]])
-    indices = Reduce(`+`, D_list_k_list[[k]]) > 0
-    indices = indices & lower.tri(indices, diag = TRUE)
-    row_indices_k_list[[k]] = which(indices, arr.ind = TRUE)[, 1] - 1
-    col_indices_k_list[[k]] = which(indices, arr.ind = TRUE)[, 2] - 1
-    indices = Reduce(`+`, D_list_mk_list[[k]]) > 0
-    indices = indices & lower.tri(indices, diag = TRUE)
-    row_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 1] - 1
-    col_indices_mk_list[[k]] = which(indices, arr.ind = TRUE)[, 2] - 1
-    if (compute_W) {
-      W_list_mk_list[[k]] = lapply(1:length(D_list), function(x) matrix(0, q, q))
-      compute_W_list(Y[-folds[[k]], , drop = FALSE], D_list_mk_list[[k]], W_list_mk_list[[k]], row_indices_mk_list[[k]], col_indices_mk_list[[k]])
-    }
-    if (!is.null(V_function) & !is.null(r)) {
-      V_mk_list[[k]] = V_function(Y[-folds[[k]], , drop = FALSE], r)
-    }
-  }
-
-  return(list(D_list_mk_list = D_list_mk_list,
-              W_list_mk_list = W_list_mk_list,
-              Q_mk_list = Q_mk_list,
-              D_list_k_list = D_list_k_list,
-              row_indices_mk_list = row_indices_mk_list,
-              col_indices_mk_list = col_indices_mk_list,
-              row_indices_k_list = row_indices_k_list,
-              col_indices_k_list = col_indices_k_list,
-              V_mk_list = V_mk_list))
 
 }
 
