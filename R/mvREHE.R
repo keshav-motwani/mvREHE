@@ -41,19 +41,11 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
     Sigma_list = Sigma_init_list
   }
 
-  indices = abs(Reduce(`+`, D_list)) > .Machine$double.eps
-  indices = indices & lower.tri(indices, diag = TRUE)
-  row_indices = which(indices, arr.ind = TRUE)[, 1] - 1
-  col_indices = which(indices, arr.ind = TRUE)[, 2] - 1
-
-  W_list = lapply(1:K, function(x) matrix(0, q, q))
-  compute_W_list(Y, D_list, W_list, row_indices, col_indices)
+  W_list = lapply(D_list, function(D) as.matrix(crossprod(Y, D %*% Y)))
 
   Q = compute_Q(D_list)
 
   for (iter in 1:max_iter) {
-
-    print(iter)
 
     Sigma_list_old = Sigma_list
 
@@ -62,15 +54,11 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
       for (k in setdiff(1:K, z)) {
         mat = mat - Sigma_list[[k]] * Q[k, z]
       }
-      eig = eigen(mat)
+      eig = eigen(mat, symmetric = TRUE)
       Sigma_list[[z]] = eig$vectors %*% (t(eig$vectors) * pmax(c(eig$values) / Q[z, z], 0))
     }
 
     if (!is.null(tolerance)) {
-      # objective[iter] = loss(Y, D_list, Sigma_list, row_indices, col_indices)
-      # if (iter > 1 && abs(objective[iter - 1] - objective[iter]) / objective[iter - 1] < tolerance) {
-      #   break
-      # }
       difference[iter] = mean(mapply(Sigma_list_old, Sigma_list, FUN = function(x, y) norm(x - y, "F") / norm(x, "F")), na.rm = TRUE)
       if (iter > 1 && is.na(difference[iter])) {
         break
@@ -110,10 +98,22 @@ compute_Q = function(D_list) {
 
   Q = matrix(NA, K, K)
 
-  for (i in 1:K) {
-    for (j in 1:i) {
-      Q[i, j] = Q[j, i] = sum(D_list[[i]] * D_list[[j]])
+  if (all(sapply(D_list, function(D) inherits(D, "CsparseMatrix")))) {
+
+    for (i in 1:K) {
+      for (j in 1:i) {
+        Q[i, j] = Q[j, i] = frobenius_inner_product(D_list[[i]], D_list[[j]])
+      }
     }
+
+  } else {
+
+    for (i in 1:K) {
+      for (j in 1:i) {
+        Q[i, j] = Q[j, i] = sum(D_list[[i]] * D_list[[j]])
+      }
+    }
+
   }
 
   return(Q)

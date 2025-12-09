@@ -6,88 +6,48 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-double loss(const arma::mat Y, const List & D_list, const List & Sigma_list, const arma::vec row_indices, const arma::vec col_indices) {
+double frobenius_inner_product(S4 A, S4 B) {
 
-  double value = 0;
+  IntegerVector A_p = A.slot("p");
+  IntegerVector A_i = A.slot("i");
+  NumericVector A_x = A.slot("x");
 
-  R_xlen_t K = D_list.size();
-  R_xlen_t q = Y.n_cols;
-  R_xlen_t s = row_indices.size();
+  IntegerVector B_p = B.slot("p");
+  IntegerVector B_i = B.slot("i");
+  NumericVector B_x = B.slot("x");
 
-  arma::mat YtY(q, q, arma::fill::zeros);
+  int ncol = A_p.size() - 1;
+  double result = 0.0;
 
-  int j = 0;
-  int m = 0;
+  for (int j = 0; j < ncol; j++) {
+    int A_start = A_p[j];
+    int A_end = A_p[j + 1];
 
-  for (R_xlen_t i = 0; i < s; i++) {
+    int B_start = B_p[j];
+    int B_end = B_p[j + 1];
 
-    j = row_indices(i);
-    m = col_indices(i);
+    int i_A = A_start;
+    int i_B = B_start;
 
-    YtY = Y.row(j).t() * Y.row(m);
-
-    for (R_xlen_t k = 0; k < K; k++) {
-      NumericMatrix Sigma_ = Sigma_list[k];
-      arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false);
-      NumericMatrix D_ = D_list[k];
-      arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
-      YtY = YtY - D(j, m) * Sigma;
-    }
-
-    if (j == m) {
-      value += arma::accu(arma::square(YtY));
-    } else {
-      value += 2 * arma::accu(arma::square(YtY));
-    }
-
-  }
-
-  value = value / (Y.n_rows * Y.n_rows);
-
-  for (R_xlen_t k = 0; k < K; k++) {
-    NumericMatrix Sigma_ = Sigma_list[k];
-    arma::mat Sigma(Sigma_.begin(), Sigma_.nrow(), Sigma_.ncol(), false) ;
-  }
-
-  return value;
-
-}
-
-// [[Rcpp::export]]
-void compute_W_list(const arma::mat & Y, const List & D_list, List & W_list, const arma::vec row_indices, const arma::vec col_indices) {
-
-  R_xlen_t s = row_indices.size();
-  R_xlen_t q = Y.n_cols;
-  R_xlen_t K = D_list.size();
-
-  arma::mat YtY(q, q, arma::fill::zeros);
-
-  int i = 0;
-  int l = 0;
-
-  for (R_xlen_t k = 0; k < K; k++) {
-
-    NumericMatrix D_ = D_list[k];
-    arma::mat D(D_.begin(), D_.nrow(), D_.ncol(), false);
-    NumericMatrix W_ = W_list[k];
-    arma::mat W(W_.begin(), W_.nrow(), W_.ncol(), false);
-
-    for (R_xlen_t j = 0; j < s; j++) {
-
-      i = row_indices(j);
-      l = col_indices(j);
-
-      YtY = Y.row(i).t() * Y.row(l);
-
-      if (i == l) {
-        W += D(i, l) * YtY;
+    while (i_A < A_end && i_B < B_end) {
+      if (A_i[i_A] == B_i[i_B]) {
+        double prod = A_x[i_A] * B_x[i_B];
+        if (A_i[i_A] == j) {
+          result += prod;
+        } else {
+          result += 2.0 * prod;
+        }
+        i_A++;
+        i_B++;
+      } else if (A_i[i_A] < B_i[i_B]) {
+        i_A++;
       } else {
-        W += D(i, l) * (YtY + YtY.t());
+        i_B++;
       }
     }
-
   }
 
+  return result;
 }
 
 // [[Rcpp::export]]

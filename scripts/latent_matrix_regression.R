@@ -227,7 +227,7 @@ cv_latent_matrix_regression = function(Y,
     stopifnot(length(setdiff(unlist(folds), 1:nrow(Y))) == 0)
   }
 
-  # covariates = vech_to_vec_indices(covariates)
+  covariates = vech_to_vec_indices(covariates)
 
   cv_r2 = array(0, dim = c(
     length(D_list),

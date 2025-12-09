@@ -11,33 +11,16 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// loss
-double loss(const arma::mat Y, const List& D_list, const List& Sigma_list, const arma::vec row_indices, const arma::vec col_indices);
-RcppExport SEXP _mvREHE_loss(SEXP YSEXP, SEXP D_listSEXP, SEXP Sigma_listSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP) {
+// frobenius_inner_product
+double frobenius_inner_product(S4 A, S4 B);
+RcppExport SEXP _mvREHE_frobenius_inner_product(SEXP ASEXP, SEXP BSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< const List& >::type D_list(D_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type Sigma_list(Sigma_listSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type row_indices(row_indicesSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type col_indices(col_indicesSEXP);
-    rcpp_result_gen = Rcpp::wrap(loss(Y, D_list, Sigma_list, row_indices, col_indices));
+    Rcpp::traits::input_parameter< S4 >::type A(ASEXP);
+    Rcpp::traits::input_parameter< S4 >::type B(BSEXP);
+    rcpp_result_gen = Rcpp::wrap(frobenius_inner_product(A, B));
     return rcpp_result_gen;
-END_RCPP
-}
-// compute_W_list
-void compute_W_list(const arma::mat& Y, const List& D_list, List& W_list, const arma::vec row_indices, const arma::vec col_indices);
-RcppExport SEXP _mvREHE_compute_W_list(SEXP YSEXP, SEXP D_listSEXP, SEXP W_listSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< const List& >::type D_list(D_listSEXP);
-    Rcpp::traits::input_parameter< List& >::type W_list(W_listSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type row_indices(row_indicesSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type col_indices(col_indicesSEXP);
-    compute_W_list(Y, D_list, W_list, row_indices, col_indices);
-    return R_NilValue;
 END_RCPP
 }
 // compute_Y_tilde
@@ -57,8 +40,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_mvREHE_loss", (DL_FUNC) &_mvREHE_loss, 5},
-    {"_mvREHE_compute_W_list", (DL_FUNC) &_mvREHE_compute_W_list, 5},
+    {"_mvREHE_frobenius_inner_product", (DL_FUNC) &_mvREHE_frobenius_inner_product, 2},
     {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 5},
     {NULL, NULL, 0}
 };
