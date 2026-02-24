@@ -41,7 +41,7 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
     Sigma_list = Sigma_init_list
   }
 
-  W_list = lapply(D_list, function(D) as.matrix(crossprod(Y, D %*% Y)))
+  W_list = lapply(D_list, function(D) crossprod(Y, as.matrix(D %*% Y)))
 
   Q = compute_Q(D_list)
 
