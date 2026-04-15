@@ -14,23 +14,37 @@
 #' @export
 #'
 #' @examples
-mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TRUE, Sigma_init_list = NULL) {
+mvREHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, tolerance = 1e-6, max_iter = 1000, return_full = TRUE, Sigma_init_list = NULL) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
+
+  if (all(sapply(D_list, function(x) is(x, "dsCMatrix")))){
+    sparse = TRUE
+    if (!is.null(W_row_pairs)) {
+      stopifnot(is(W_row_pairs, "dsCMatrix"))
+    }
+  } else {
+    sparse = FALSE
+    stopifnot(all(sapply(D_list, is.matrix)))
+    if (!is.null(W_row_pairs)) {
+      stopifnot(is.matrix(W_row_pairs))
+    }
+  }
 
   n = nrow(Y)
   q = ncol(Y)
   K = length(D_list)
   difference = numeric(max_iter)
 
+  if (!is.null(w_columns)) {
+    Y = t(t(Y) * sqrt(w_columns))
+  }
+
   highdim = q > n
-
   if (highdim) {
-
     s = svd(Y)
     Y = Y %*% s$v
     q = ncol(Y)
-
   }
 
   if (is.null(Sigma_init_list)) {
@@ -41,16 +55,27 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
     Sigma_list = Sigma_init_list
   }
 
-  W_list = lapply(D_list, function(D) crossprod(Y, as.matrix(D %*% Y)))
+  if (is.null(W_row_pairs)) {
+    G_list = lapply(D_list, function(D) crossprod(Y, as.matrix(D %*% Y)))
+  } else {
+    if (!sparse) {
+      G_list = lapply(D_list, function(D) crossprod(Y, (W_row_pairs * D) %*% Y))
+    } else {
+      G_list = lapply(D_list, function(D) {
+        WDY = compute_WDY(D, W_row_pairs, Y)
+        as.matrix(crossprod(Y, WDY))
+      })
+    }
+  }
 
-  Q = compute_Q(D_list)
+  Q = compute_Q(D_list, W_row_pairs, sparse)
 
   for (iter in 1:max_iter) {
 
     Sigma_list_old = Sigma_list
 
     for (z in 1:K) {
-      mat = W_list[[z]]
+      mat = G_list[[z]]
       for (k in setdiff(1:K, z)) {
         mat = mat - Sigma_list[[k]] * Q[k, z]
       }
@@ -77,12 +102,20 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
     result$Sigma_hat = Sigma_list
     result$V = s$v
 
+    if (!is.null(w_columns)) {
+      result$V = t(t(result$V) / sqrt(w_columns))
+    }
+
     if (return_full) {
-      result$Sigma_hat = lapply(Sigma_list, function(Sigma_r) s$v %*% Sigma_r %*% t(s$v))
+      result$Sigma_hat = lapply(Sigma_list, function(Sigma_r) result$V %*% Sigma_r %*% t(result$V))
       result$V = NULL
     }
 
   } else {
+
+    if (!is.null(w_columns)) {
+      Sigma_list = lapply(Sigma_list, function(Sigma) diag(1 / sqrt(w_columns)) %*% Sigma %*% diag(1 / sqrt(w_columns)))
+    }
 
     result$Sigma_hat = Sigma_list
 
@@ -92,17 +125,17 @@ mvREHE = function(Y, D_list, tolerance = 1e-6, max_iter = 1000, return_full = TR
 
 }
 
-compute_Q = function(D_list) {
+compute_Q = function(D_list, W_row_pairs, sparse) {
 
   K = length(D_list)
 
   Q = matrix(NA, K, K)
 
-  if (all(sapply(D_list, function(D) inherits(D, "CsparseMatrix")))) {
+  if (sparse) {
 
     for (i in 1:K) {
       for (j in 1:i) {
-        Q[i, j] = Q[j, i] = frobenius_inner_product(D_list[[i]], D_list[[j]])
+        Q[i, j] = Q[j, i] = frobenius_inner_product(D_list[[i]], D_list[[j]], W_row_pairs)
       }
     }
 
@@ -110,7 +143,11 @@ compute_Q = function(D_list) {
 
     for (i in 1:K) {
       for (j in 1:i) {
-        Q[i, j] = Q[j, i] = sum(D_list[[i]] * D_list[[j]])
+        if (!is.null(W_row_pairs)) {
+          Q[i, j] = Q[j, i] = sum(D_list[[i]] * D_list[[j]] * W_row_pairs)
+        } else {
+          Q[i, j] = Q[j, i] = sum(D_list[[i]] * D_list[[j]])
+        }
       }
     }
 

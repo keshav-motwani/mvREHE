@@ -12,14 +12,28 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // frobenius_inner_product
-double frobenius_inner_product(S4 A, S4 B);
-RcppExport SEXP _mvREHE_frobenius_inner_product(SEXP ASEXP, SEXP BSEXP) {
+double frobenius_inner_product(S4 A, S4 B, Rcpp::Nullable<Rcpp::S4> C);
+RcppExport SEXP _mvREHE_frobenius_inner_product(SEXP ASEXP, SEXP BSEXP, SEXP CSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< S4 >::type A(ASEXP);
     Rcpp::traits::input_parameter< S4 >::type B(BSEXP);
-    rcpp_result_gen = Rcpp::wrap(frobenius_inner_product(A, B));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::S4> >::type C(CSEXP);
+    rcpp_result_gen = Rcpp::wrap(frobenius_inner_product(A, B, C));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_WDY
+arma::mat compute_WDY(S4 D, S4 W, const arma::mat& Y);
+RcppExport SEXP _mvREHE_compute_WDY(SEXP DSEXP, SEXP WSEXP, SEXP YSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< S4 >::type D(DSEXP);
+    Rcpp::traits::input_parameter< S4 >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_WDY(D, W, Y));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -40,7 +54,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_mvREHE_frobenius_inner_product", (DL_FUNC) &_mvREHE_frobenius_inner_product, 2},
+    {"_mvREHE_frobenius_inner_product", (DL_FUNC) &_mvREHE_frobenius_inner_product, 3},
+    {"_mvREHE_compute_WDY", (DL_FUNC) &_mvREHE_compute_WDY, 3},
     {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 5},
     {NULL, NULL, 0}
 };

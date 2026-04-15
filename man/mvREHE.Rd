@@ -7,6 +7,8 @@
 mvREHE(
   Y,
   D_list,
+  W_row_pairs = NULL,
+  w_columns = NULL,
   tolerance = 1e-06,
   max_iter = 1000,
   return_full = TRUE,
