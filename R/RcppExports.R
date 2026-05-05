@@ -13,3 +13,7 @@ compute_Y_tilde <- function(Y, row_indices, col_indices, j, m) {
     .Call('_mvREHE_compute_Y_tilde', PACKAGE = 'mvREHE', Y, row_indices, col_indices, j, m)
 }
 
+compute_W_sparse <- function(R, R2, R_diag, R2_diag, h2, rho_g, rho_e, N, M_snps) {
+    .Call('_mvREHE_compute_W_sparse', PACKAGE = 'mvREHE', R, R2, R_diag, R2_diag, h2, rho_g, rho_e, N, M_snps)
+}
+

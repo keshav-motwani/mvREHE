@@ -52,11 +52,31 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// compute_W_sparse
+S4 compute_W_sparse(S4 R, S4 R2, NumericVector R_diag, NumericVector R2_diag, double h2, double rho_g, double rho_e, double N, double M_snps);
+RcppExport SEXP _mvREHE_compute_W_sparse(SEXP RSEXP, SEXP R2SEXP, SEXP R_diagSEXP, SEXP R2_diagSEXP, SEXP h2SEXP, SEXP rho_gSEXP, SEXP rho_eSEXP, SEXP NSEXP, SEXP M_snpsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< S4 >::type R(RSEXP);
+    Rcpp::traits::input_parameter< S4 >::type R2(R2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type R_diag(R_diagSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type R2_diag(R2_diagSEXP);
+    Rcpp::traits::input_parameter< double >::type h2(h2SEXP);
+    Rcpp::traits::input_parameter< double >::type rho_g(rho_gSEXP);
+    Rcpp::traits::input_parameter< double >::type rho_e(rho_eSEXP);
+    Rcpp::traits::input_parameter< double >::type N(NSEXP);
+    Rcpp::traits::input_parameter< double >::type M_snps(M_snpsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_W_sparse(R, R2, R_diag, R2_diag, h2, rho_g, rho_e, N, M_snps));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_frobenius_inner_product", (DL_FUNC) &_mvREHE_frobenius_inner_product, 3},
     {"_mvREHE_compute_WDY", (DL_FUNC) &_mvREHE_compute_WDY, 3},
     {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 5},
+    {"_mvREHE_compute_W_sparse", (DL_FUNC) &_mvREHE_compute_W_sparse, 9},
     {NULL, NULL, 0}
 };
 

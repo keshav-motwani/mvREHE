@@ -2,6 +2,7 @@
 
 export(mvHE)
 export(mvREHE)
+export(mvREHE_SNP)
 export(univariate)
 importFrom(Rcpp,evalCpp)
 useDynLib(mvREHE)

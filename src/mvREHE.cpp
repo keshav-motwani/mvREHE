@@ -2,6 +2,8 @@
 
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
+#include <vector>
+#include <algorithm>
 
 using namespace Rcpp;
 
@@ -169,4 +171,81 @@ arma::vec compute_Y_tilde(const arma::mat & Y, const arma::vec row_indices, cons
 
   return Y_tilde;
 
+}
+
+// [[Rcpp::export]]
+S4 compute_W_sparse(S4 R, S4 R2, NumericVector R_diag, NumericVector R2_diag,
+                    double h2, double rho_g, double rho_e, double N, double M_snps) {
+
+  IntegerVector R_p = R.slot("p");
+  IntegerVector R_i = R.slot("i");
+  NumericVector R_x = R.slot("x");
+
+  IntegerVector R2_p = R2.slot("p");
+  IntegerVector R2_i = R2.slot("i");
+  NumericVector R2_x = R2.slot("x");
+
+  int M_cols = R_p.size() - 1;
+
+  std::vector<int> W_p(M_cols + 1, 0);
+  std::vector<int> W_i;
+  std::vector<double> W_x;
+
+  int estimated_nnz = std::max(R_i.size(), R2_i.size());
+  W_i.reserve(estimated_nnz);
+  W_x.reserve(estimated_nnz);
+
+  for (int c = 0; c < M_cols; c++) {
+    int ptr_R = R_p[c], end_R = R_p[c + 1];
+    int ptr_R2 = R2_p[c], end_R2 = R2_p[c + 1];
+
+    while (ptr_R < end_R || ptr_R2 < end_R2) {
+
+      int r;
+      double val_R = 0.0, val_R2 = 0.0;
+
+      bool use_R = (ptr_R < end_R);
+      bool use_R2 = (ptr_R2 < end_R2);
+
+      if (use_R && use_R2) {
+        if (R_i[ptr_R] == R2_i[ptr_R2]) {
+          r = R_i[ptr_R];
+          val_R = R_x[ptr_R++];
+          val_R2 = R2_x[ptr_R2++];
+        } else if (R_i[ptr_R] < R2_i[ptr_R2]) {
+          r = R_i[ptr_R];
+          val_R = R_x[ptr_R++];
+        } else {
+          r = R2_i[ptr_R2];
+          val_R2 = R2_x[ptr_R2++];
+        }
+      } else if (use_R) {
+        r = R_i[ptr_R];
+        val_R = R_x[ptr_R++];
+      } else {
+        r = R2_i[ptr_R2];
+        val_R2 = R2_x[ptr_R2++];
+      }
+
+      double term_s = (N / M_snps) * R2_diag[r] * h2 + R_diag[r] * (1.0 - h2);
+      double term_t = (N / M_snps) * R2_diag[c] * h2 + R_diag[c] * (1.0 - h2);
+      double term_st = (N / M_snps) * val_R2 * rho_g * h2 + val_R * rho_e * (1.0 - h2);
+
+      double denom = (R2_diag[r] * R2_diag[c]) * (term_s * term_t + term_st * term_st);
+
+      if (denom > 0) {
+        W_i.push_back(r);
+        W_x.push_back(1.0 / denom);
+      }
+    }
+
+    W_p[c + 1] = W_i.size();
+  }
+
+  S4 W = clone(R);
+  W.slot("p") = IntegerVector(W_p.begin(), W_p.end());
+  W.slot("i") = IntegerVector(W_i.begin(), W_i.end());
+  W.slot("x") = NumericVector(W_x.begin(), W_x.end());
+
+  return W;
 }
