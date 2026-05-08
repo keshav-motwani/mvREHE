@@ -26,13 +26,28 @@ mvHE = function(Y, D_list, truncate = TRUE) {
 
   Sigma_hat = replicate(length(D_list), matrix(NA, q, q), simplify = FALSE)
 
-  indices = Reduce(`+`, D_list) > 0
-  row_indices = which(indices, arr.ind = TRUE)[, 1]
-  col_indices = which(indices, arr.ind = TRUE)[, 2]
-  indices = which(indices)
+  if (all(sapply(D_list, function(x) is(x, "sparseMatrix")))) {
 
-  X_tilde = do.call(cbind, lapply(D_list, c))
-  X_tilde = X_tilde[indices, ]
+    sum_D = Reduce(`+`, D_list)
+    sum_T = as(sum_D, "dgTMatrix")
+
+    row_indices = sum_T@i + 1
+    col_indices = sum_T@j + 1
+
+    X_tilde_list = lapply(D_list, function(m) {
+      m[cbind(row_indices, col_indices)]
+    })
+
+    X_tilde = do.call(cbind, X_tilde_list)
+
+  } else {
+    mask = Reduce(`+`, D_list) > 0
+    coord_matrix = which(mask, arr.ind = TRUE)
+    row_indices = coord_matrix[, 1]
+    col_indices = coord_matrix[, 2]
+    indices = which(mask)
+    X_tilde = sapply(D_list, function(m) m[indices])
+  }
 
   XtXinv = solve(crossprod(X_tilde))
 
