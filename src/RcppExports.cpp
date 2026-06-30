@@ -37,18 +37,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// compute_Y_tilde
-arma::vec compute_Y_tilde(const arma::mat& Y, const arma::vec row_indices, const arma::vec col_indices, int j, int m);
-RcppExport SEXP _mvREHE_compute_Y_tilde(SEXP YSEXP, SEXP row_indicesSEXP, SEXP col_indicesSEXP, SEXP jSEXP, SEXP mSEXP) {
+// compute_G
+arma::mat compute_G(S4 D, S4 W, const arma::mat& Y);
+RcppExport SEXP _mvREHE_compute_G(SEXP DSEXP, SEXP WSEXP, SEXP YSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< S4 >::type D(DSEXP);
+    Rcpp::traits::input_parameter< S4 >::type W(WSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type row_indices(row_indicesSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type col_indices(col_indicesSEXP);
-    Rcpp::traits::input_parameter< int >::type j(jSEXP);
-    Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_Y_tilde(Y, row_indices, col_indices, j, m));
+    rcpp_result_gen = Rcpp::wrap(compute_G(D, W, Y));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -75,7 +73,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_mvREHE_frobenius_inner_product", (DL_FUNC) &_mvREHE_frobenius_inner_product, 3},
     {"_mvREHE_compute_WDY", (DL_FUNC) &_mvREHE_compute_WDY, 3},
-    {"_mvREHE_compute_Y_tilde", (DL_FUNC) &_mvREHE_compute_Y_tilde, 5},
+    {"_mvREHE_compute_G", (DL_FUNC) &_mvREHE_compute_G, 3},
     {"_mvREHE_compute_W_sparse", (DL_FUNC) &_mvREHE_compute_W_sparse, 9},
     {NULL, NULL, 0}
 };

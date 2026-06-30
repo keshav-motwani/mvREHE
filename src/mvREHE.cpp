@@ -158,20 +158,64 @@ arma::mat compute_WDY(S4 D, S4 W, const arma::mat& Y) {
   return Z;
 }
 
+// Directly accumulates G = t(Y) %*% (W * D) %*% Y into a q x q matrix,
+// avoiding the N x q intermediate that compute_WDY + crossprod would allocate.
+// For each lower-triangle entry (r, l, val) of W*D:
+//   diagonal (r==l): G += val * y_r y_r^T
+//   off-diag (r>l):  G += val * (y_r y_l^T + y_l y_r^T)
 // [[Rcpp::export]]
-arma::vec compute_Y_tilde(const arma::mat & Y, const arma::vec row_indices, const arma::vec col_indices, int j, int m) {
+arma::mat compute_G(S4 D, S4 W, const arma::mat& Y) {
 
-  R_xlen_t s = row_indices.size();
+  IntegerVector D_p = D.slot("p");
+  IntegerVector D_i = D.slot("i");
+  NumericVector D_x = D.slot("x");
 
-  arma::vec Y_tilde(s, arma::fill::zeros);
+  IntegerVector W_p = W.slot("p");
+  IntegerVector W_i = W.slot("i");
+  NumericVector W_x = W.slot("x");
 
-  for (R_xlen_t i = 0; i < s; i++) {
-    Y_tilde(i) = Y(row_indices(i), j) * Y(col_indices(i), m);
+  int q = Y.n_cols;
+  int ncol = D_p.size() - 1;
+  arma::mat G(q, q, arma::fill::zeros);
+
+  // For symmetric matrices stored once (lower-triangle including diagonal),
+  // accumulate per column l: let s = \sum_r val_{r,l} * y_r, and d = val_{l,l}
+  // then the contribution to G is: s * y_l^T + y_l * s^T - d * (y_l * y_l^T)
+  for (int l = 0; l < ncol; l++) {
+    int idx_D = D_p[l], end_D = D_p[l + 1];
+    int idx_W = W_p[l], end_W = W_p[l + 1];
+
+    arma::vec s(q, arma::fill::zeros);
+    double d = 0.0;
+
+    while (idx_D < end_D && idx_W < end_W) {
+      int rD = D_i[idx_D];
+      int rW = W_i[idx_W];
+
+      if (rD == rW) {
+        double val = D_x[idx_D] * W_x[idx_W];
+        // accumulate s += val * y_r
+        for (int a = 0; a < q; ++a) s[a] += val * Y(rD, a);
+        if (rD == l) d += val;
+        ++idx_D; ++idx_W;
+      } else if (rD < rW) {
+        ++idx_D;
+      } else {
+        ++idx_W;
+      }
+    }
+
+    if (arma::norm(s, 1) > 0) {
+      arma::vec yl = Y.row(l).t();
+      G += s * yl.t();
+      G += yl * s.t();
+      if (d != 0.0) G -= d * (yl * yl.t());
+    }
   }
 
-  return Y_tilde;
-
+  return G;
 }
+
 
 // [[Rcpp::export]]
 S4 compute_W_sparse(S4 R, S4 R2, NumericVector R_diag, NumericVector R2_diag,
