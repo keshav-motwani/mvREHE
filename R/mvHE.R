@@ -2,87 +2,77 @@
 #'
 #' @param Y
 #' @param D_list
+#' @param W_row_pairs
+#' @param w_columns
+#' @param truncate
 #'
 #' @return
 #' @export
 #'
 #' @examples
-mvHE = function(Y, D_list, truncate = TRUE) {
+mvHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, truncate = TRUE) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
 
   q = ncol(Y)
   n = nrow(Y)
+  K = length(D_list)
+
+  sparse = all(sapply(D_list, function(x) is(x, "dsCMatrix")))
+
+  if (!is.null(w_columns)) {
+    Y = t(t(Y) * sqrt(w_columns))
+  }
 
   highdim = q > n
-
   if (highdim) {
-
     s = svd(Y)
     Y = Y %*% s$v
     q = ncol(Y)
-
   }
 
-  Sigma_hat = replicate(length(D_list), matrix(NA, q, q), simplify = FALSE)
-
-  if (all(sapply(D_list, function(x) is(x, "sparseMatrix")))) {
-
-    sum_D = Reduce(`+`, D_list)
-    sum_T = as(sum_D, "dgTMatrix")
-
-    row_indices = sum_T@i + 1
-    col_indices = sum_T@j + 1
-
-    X_tilde_list = lapply(D_list, function(m) {
-      m[cbind(row_indices, col_indices)]
+  # Compute G matrices: G[[k]][j,m] = Y^T (W * D_k) Y  (W = identity if unweighted)
+  if (is.null(W_row_pairs)) {
+    G_list = lapply(D_list, function(D) crossprod(Y, as.matrix(D %*% Y)))
+  } else if (sparse) {
+    G_list = lapply(D_list, function(D) {
+      as.matrix(crossprod(Y, compute_WDY(D, W_row_pairs, Y)))
     })
-
-    X_tilde = do.call(cbind, X_tilde_list)
-
   } else {
-    mask = Reduce(`+`, D_list) > 0
-    coord_matrix = which(mask, arr.ind = TRUE)
-    row_indices = coord_matrix[, 1]
-    col_indices = coord_matrix[, 2]
-    indices = which(mask)
-    X_tilde = sapply(D_list, function(m) m[indices])
+    G_list = lapply(D_list, function(D) crossprod(Y, (W_row_pairs * D) %*% Y))
   }
 
-  XtXinv = solve(crossprod(X_tilde))
+  Q = compute_Q(D_list, W_row_pairs, sparse)
 
-  for (j in 1:q) {
+  # Solve Q * Sigma_mat = G_mat for all q² elements simultaneously (direct OLS)
+  G_mat = do.call(rbind, lapply(G_list, as.vector))  # K × q²
+  Sigma_mat = solve(Q, G_mat)                        # K × q²
 
-    for (m in 1:j) {
-
-      Y_tilde = compute_Y_tilde(Y, row_indices - 1, col_indices - 1, j - 1, m - 1)
-
-      sigma_hat = XtXinv %*% crossprod(X_tilde, Y_tilde)
-      for (k in 1:length(D_list)) {
-        Sigma_hat[[k]][j, m] = Sigma_hat[[k]][m, j] = sigma_hat[k]
-      }
-
-    }
-
-  }
+  Sigma_hat = lapply(seq_len(K), function(k) {
+    S = matrix(Sigma_mat[k, ], q, q)
+    (S + t(S)) / 2
+  })
 
   if (truncate) {
-    for (k in 1:length(D_list)) {
-      Sigma_k_hat = Sigma_hat[[k]]
-      eigen_Sigma_k_hat = eigen(Sigma_k_hat)
-      Sigma_hat[[k]] = eigen_Sigma_k_hat$vectors %*% diag(c(pmax(eigen_Sigma_k_hat$values, 0)), ncol(eigen_Sigma_k_hat$vectors), ncol(eigen_Sigma_k_hat$vectors)) %*% t(eigen_Sigma_k_hat$vectors)
-      if (any(eigen_Sigma_k_hat$values < 0)) {
-        attr(Sigma_hat[[k]], "truncated") = TRUE
-      } else {
-        attr(Sigma_hat[[k]], "truncated") = FALSE
-      }
+    for (k in 1:K) {
+      eig = eigen(Sigma_hat[[k]], symmetric = TRUE)
+      Sigma_hat[[k]] = eig$vectors %*% (t(eig$vectors) * pmax(eig$values, 0))
+      attr(Sigma_hat[[k]], "truncated") = any(eig$values < 0)
     }
   }
 
   if (highdim) {
-
-    Sigma_hat = lapply(Sigma_hat, function(Sigma_r) s$v %*% Sigma_r %*% t(s$v))
-
+    if (!is.null(w_columns)) {
+      V = t(t(s$v) / sqrt(w_columns))
+    } else {
+      V = s$v
+    }
+    Sigma_hat = lapply(Sigma_hat, function(S) V %*% S %*% t(V))
+  } else {
+    if (!is.null(w_columns)) {
+      W_inv_sqrt = 1 / sqrt(w_columns)
+      Sigma_hat = lapply(Sigma_hat, function(S) t(t(S * W_inv_sqrt) * W_inv_sqrt))
+    }
   }
 
   return(list(Sigma_hat = Sigma_hat))
