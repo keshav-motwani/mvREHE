@@ -275,7 +275,7 @@ S4 compute_W_sparse(S4 R, S4 R2, NumericVector R_diag, NumericVector R2_diag,
       double term_t = (N / M_snps) * R2_diag[c] * h2 + R_diag[c] * (1.0 - h2);
       double term_st = (N / M_snps) * val_R2 * rho_g * h2 + val_R * rho_e * (1.0 - h2);
 
-      double denom = (R2_diag[r] * R2_diag[c]) * (term_s * term_t + term_st * term_st);
+      double denom = std::sqrt(R2_diag[r] * R2_diag[c]) * (term_s * term_t + term_st * term_st);
 
       if (denom > 0) {
         W_i.push_back(r);
