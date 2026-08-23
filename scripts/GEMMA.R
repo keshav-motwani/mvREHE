@@ -24,7 +24,7 @@ GEMMA = function(Y, D_list) {
 
   out_name = basename(tempfile())
 
-  gemma = paste0("/apps/gemma/0.98.5/bin/gemma -g ", geno_file, " -p ", Y_file, " -n ", paste(1:ncol(Y), collapse = " "), " -k ", K_file, " -lmm -o ", out_name)
+  gemma = paste0("gemma -g ", geno_file, " -p ", Y_file, " -n ", paste(1:ncol(Y), collapse = " "), " -k ", K_file, " -lmm -o ", out_name)
   system(gemma)
   extract_G = paste0("sed -n '", 25, ",", 25 + ncol(Y) - 1, " p' ", "output/", out_name, ".log.txt > output/Sigma_G_", out_name, ".txt")
   system(extract_G)

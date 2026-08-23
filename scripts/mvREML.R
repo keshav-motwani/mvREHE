@@ -1,21 +1,13 @@
-library(devtools)
-library(optimx)
+library(glmmTMB)
 library(reshape2)
 library(Matrix)
-
-library(lme4)
-attach(loadNamespace("lme4"), name = "lme4_all")
-
-source("scripts/lme4 - multi/functions/mkBlistMV.R")
-source("scripts/lme4 - multi/functions/mkReTrmsMV.R")
-source("scripts/lme4 - multi/functions/lformulaMV.R")
 
 mvREML = function(Y, D_list) {
 
   if (length(D_list) == 2) {
-    estimate = mvREML_2(Y, D_list)
+    estimate = mvREML_inner(Y, D_list[1:2])
   } else if (length(D_list) == 3) {
-    estimate = mvREML_3(Y, D_list)
+    estimate = mvREML_inner(Y, D_list)
   }
 
   if (any(sapply(estimate$Sigma_hat, function(Sigma) any(is.na(Sigma))))) {
@@ -29,105 +21,119 @@ mvREML = function(Y, D_list) {
 
 }
 
-mvREML_3 = function(Y, D_list) {
-
-  D_0 = D_list[[1]]
-  D_1 = D_list[[2]]
-  D_2 = D_list[[3]]
-
-  if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
-
-  colnames(Y) = paste("y.", 1:ncol(Y), sep = "")
-
-  expand = diag(1, nrow(D_1), nrow(D_1))
-  expand = expand[, !duplicated(D_1)]
-  expand[cbind(which(duplicated(D_1)), which(duplicated(D_1)) - 1:sum(duplicated(D_1)))] = 1
-  id_genetic = apply(expand, 1, function(x) which(x == 1))
-  D_1 = D_1[!duplicated(D_1), !duplicated(D_1)]
-  colnames(D_1) = rownames(D_1) = unique(id_genetic)
-
-  expand = diag(1, nrow(D_2), nrow(D_2))
-  expand = expand[, !duplicated(D_2)]
-  expand[cbind(which(duplicated(D_2)), which(duplicated(D_2)) - 1:sum(duplicated(D_2)))] = 1
-  id_common_env = apply(expand, 1, function(x) which(x == 1))
-  D_2 = D_2[!duplicated(D_2), !duplicated(D_2)]
-  colnames(D_2) = rownames(D_2) = unique(id_common_env)
-
-  id_noise = 1:nrow(Y)
-
-  Ydata = data.frame(Y, id_genetic = id_genetic, id_common_env = id_common_env, id_noise = id_noise)
-  mYdata = melt(data.frame(Ydata, obs = seq(nrow(Ydata))), id.var = c("obs", "id_genetic", "id_common_env", "id_noise"), variable.name = "variable")
-  mYdata = cbind(id_unique = 1:nrow(mYdata),mYdata)
-
-  corr = NULL
-  corr$id_genetic = D_1
-  corr$id_common_env = D_2
-
-  lf = lFormulaMV(value ~ 0 + (0 + variable | id_genetic) + (0 + variable | id_common_env) + (0 + variable | id_noise), data = mYdata, cov_re = corr)
-  dfun <- do.call(mkLmerDevfun, lf)
-  opt <- optimizeLmer(dfun)
-
-  fit <- mkMerMod(environment(dfun), opt, lf$reTrms,fr = lf$fr) # Fit model
-  vc_lme = VarCorr(fit)                                         # Get Variance-Covariance
-
-  corr_noise = as.matrix(attr(vc_lme$id_noise,"correlation"));
-  std_dev_noise = as.vector(attr(vc_lme$id_noise,"stddev"));
-  res_noise = as.numeric(attr(vc_lme,"sc"));
-  cov_noise = std_dev_noise%*%t(std_dev_noise)*corr_noise + diag(res_noise,nrow(corr_noise),ncol(corr_noise))^2;
-
-  corr_genetic = as.matrix(attr(vc_lme$id_genetic,"correlation"));
-  std_dev_genetic = as.vector(attr(vc_lme$id_genetic,"stddev"));
-  cov_genetic = std_dev_genetic%*%t(std_dev_genetic)*corr_genetic;
-
-  corr_common_env = as.matrix(attr(vc_lme$id_common_env,"correlation"));
-  std_dev_common_env = as.vector(attr(vc_lme$id_common_env,"stddev"));
-  cov_common_env = std_dev_common_env%*%t(std_dev_common_env)*corr_common_env;
-
-  return(list(Sigma_hat = list(cov_noise, cov_genetic, cov_common_env)))
-
+resolve_dups = function(D, digits = 10) {
+  row_keys = apply(round(D, digits), 1, paste, collapse = "\t")
+  unique_mask = !duplicated(row_keys)
+  ids = match(row_keys, row_keys[unique_mask])
+  list(ids = ids, D = D[unique_mask, unique_mask, drop = FALSE])
 }
 
-mvREML_2 = function(Y, D_list) {
+to_sparse_sym = function(M) {
+  as(as(as(M, "dMatrix"), "symmetricMatrix"), "CsparseMatrix")
+}
 
-  D_0 = D_list[[1]]
-  D_1 = D_list[[2]]
+ensure_psd = function(M, eps = 1e-8) {
+  e = eigen(M, symmetric = TRUE)
+  e$vectors %*% diag(pmax(e$values, eps)) %*% t(e$vectors)
+}
+
+mvREML_inner = function(Y, D_list) {
 
   if (!is.matrix(Y)) Y = matrix(Y, ncol = 1)
+  q = ncol(Y)
+  n = nrow(Y)
+  colnames(Y) = paste0("y.", 1:q)
 
-  colnames(Y) = paste("y.", 1:ncol(Y), sep = "")
+  # D_list[[1]] is the noise covariance (not used — handled by id_noise term)
+  # D_list[[2]] is the genetic kinship
+  # D_list[[3]] (if present) is the common env kinship
 
-  expand = diag(1, nrow(D_1), nrow(D_1))
-  expand = expand[, !duplicated(D_1)]
-  expand[cbind(which(duplicated(D_1)), which(duplicated(D_1)) - 1:sum(duplicated(D_1)))] = 1
-  id_genetic = apply(expand, 1, function(x) which(x == 1))
-  D_1 = D_1[!duplicated(D_1), !duplicated(D_1)]
-  colnames(D_1) = rownames(D_1) = unique(id_genetic)
+  D_1_raw = as.matrix(D_list[[2]])
+  res_1 = resolve_dups(D_1_raw)
+  D_1 = res_1$D
+  rownames(D_1) = colnames(D_1) = seq_len(nrow(D_1))
+  id_genetic = factor(res_1$ids, levels = rownames(D_1))
 
-  id_envir = 1:nrow(Y)
+  has_common_env = length(D_list) >= 3
+  if (has_common_env) {
+    D_2_raw = as.matrix(D_list[[3]])
+    res_2 = resolve_dups(D_2_raw)
+    D_2 = res_2$D
+    rownames(D_2) = colnames(D_2) = seq_len(nrow(D_2))
+    id_common_env = factor(res_2$ids, levels = rownames(D_2))
+  }
 
-  Ydata = data.frame(Y, id_genetic = id_genetic, id_envir = id_envir)
-  mYdata = melt(data.frame(Ydata, obs = seq(nrow(Ydata))), id.var = c("obs", "id_genetic", "id_envir"), variable.name = "variable")
-  mYdata = cbind(id_unique = 1:nrow(mYdata),mYdata)
+  id_noise = factor(1:n)
 
-  corr = NULL;
-  corr$id_genetic = D_1;
+  if (has_common_env) {
+    Ydata = data.frame(Y, id_genetic = id_genetic, id_common_env = id_common_env, id_noise = id_noise)
+    mYdata = melt(Ydata, id.var = c("id_genetic", "id_common_env", "id_noise"), variable.name = "variable")
+  } else {
+    Ydata = data.frame(Y, id_genetic = id_genetic, id_noise = id_noise)
+    mYdata = melt(Ydata, id.var = c("id_genetic", "id_noise"), variable.name = "variable")
+  }
 
-  lf = lFormulaMV(value ~ 0 + (0 + variable | id_genetic) + (0 + variable | id_envir), data = mYdata, cov_re = corr)
-  dfun <- do.call(mkLmerDevfun, lf)
-  opt <- optimizeLmer(dfun)
+  n_gen = nlevels(id_genetic)
+  L_1 = t(chol(to_sparse_sym(D_1)))
+  L_kron_1 = kronecker(L_1, Diagonal(q))
 
-  fit <- mkMerMod(environment(dfun), opt, lf$reTrms,fr = lf$fr) # Fit model
-  vc_lme = VarCorr(fit)                                         # Get Variance-Covariance
+  if (has_common_env) {
+    n_com = nlevels(id_common_env)
+    L_2 = t(chol(to_sparse_sym(D_2)))
+    L_kron_2 = kronecker(L_2, Diagonal(q))
+  }
 
-  corr_envir = as.matrix(attr(vc_lme$id_envir,"correlation"));
-  std_dev_envir = as.vector(attr(vc_lme$id_envir,"stddev"));
-  res_envir = as.numeric(attr(vc_lme,"sc"));
-  cov_envir = std_dev_envir%*%t(std_dev_envir)*corr_envir + diag(res_envir,nrow(corr_envir),ncol(corr_envir))^2;
+  if (has_common_env) {
+    form = value ~ 0 +
+      (0 + variable | id_genetic) +
+      (0 + variable | id_common_env) +
+      (0 + variable | id_noise)
+    if (ncol(Y) == 1) {
+      form = value ~ 0 +
+        (1 | id_genetic) +
+        (1 | id_common_env) +
+        (1 | id_noise)
+    }
+  } else {
+    form = value ~ 0 +
+      (0 + variable | id_genetic) +
+      (0 + variable | id_noise)
+    if (ncol(Y) == 1) {
+      form = value ~ 0 +
+        (1 | id_genetic) +
+        (1 | id_noise)
+    }
+  }
 
-  corr_genetic = as.matrix(attr(vc_lme$id_genetic,"correlation"));
-  std_dev_genetic = as.vector(attr(vc_lme$id_genetic,"stddev"));
-  cov_genetic = std_dev_genetic%*%t(std_dev_genetic)*corr_genetic;
+  m0 = glmmTMB(form, data = mYdata, REML = TRUE, doFit = FALSE, dispformula = ~0)
 
-  return(list(Sigma_0_hat = cov_envir, Sigma_1_hat = cov_genetic, Sigma_hat = list(cov_envir, cov_genetic)))
+  cols_gen = 1:(n_gen * q)
+  m0$data.tmb$Z[, cols_gen] = m0$data.tmb$Z[, cols_gen] %*% L_kron_1
+
+  if (has_common_env) {
+    cols_com = (n_gen * q + 1):(n_gen * q + n_com * q)
+    m0$data.tmb$Z[, cols_com] = m0$data.tmb$Z[, cols_com] %*% L_kron_2
+  }
+
+  best_fit = tryCatch(suppressWarnings(glmmTMB:::fitTMB(m0, doOptim = TRUE)), error = function(e) NULL)
+
+  na_mat = matrix(NA_real_, q, q)
+  if (is.null(best_fit) || is.null(best_fit$fit)) {
+    if (has_common_env)
+      return(list(Sigma_hat = list(na_mat, na_mat, na_mat)))
+    else
+      return(list(Sigma_hat = list(na_mat, na_mat)))
+  }
+
+  vc = VarCorr(best_fit)
+  Sigma_noise   = as.matrix(vc$cond$id_noise)
+  Sigma_genetic = as.matrix(vc$cond$id_genetic)
+
+  if (has_common_env) {
+    Sigma_common_env = as.matrix(vc$cond$id_common_env)
+    return(list(Sigma_hat = list(Sigma_noise, Sigma_genetic, Sigma_common_env)))
+  } else {
+    return(list(Sigma_hat = list(Sigma_noise, Sigma_genetic)))
+  }
 
 }

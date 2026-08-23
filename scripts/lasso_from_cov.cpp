@@ -1,4 +1,4 @@
-// [[Rcpp::plugins(cpp11)]]
+// [[Rcpp::plugins(cpp14)]]
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
 using namespace arma;
@@ -124,67 +124,3 @@ arma::mat lasso_from_cov(const arma::mat& Sigma_hat,
   
   return beta_path;
 }
-
-
-// // [[Rcpp::plugins(cpp11)]]
-// // [[Rcpp::depends(RcppArmadillo)]]
-// #include <RcppArmadillo.h>
-// 
-// using namespace arma;
-// using namespace Rcpp;
-// 
-// // Soft-thresholding function
-// inline double soft_threshold(double z, double lambda) {
-//   if (z > lambda) return z - lambda;
-//   if (z < -lambda) return z + lambda;
-//   return 0.0;
-// }
-// 
-// // [[Rcpp::export]]
-// arma::mat lasso_from_cov(const arma::mat& Sigma_hat,
-//                          const arma::vec& lambda_seq,
-//                          const int max_iter = 1000,
-//                          const double tolerance = 1e-6) {
-//   
-//   // Extract XtX and XtY from Sigma_hat
-//   arma::mat XtX = Sigma_hat.submat(1, 1, Sigma_hat.n_rows - 1, Sigma_hat.n_cols - 1);
-//   arma::vec XtY = Sigma_hat.submat(1, 0, Sigma_hat.n_rows - 1, 0);
-//   
-//   int p = XtX.n_cols;
-//   int n_lambda = lambda_seq.n_elem;
-//   
-//   arma::mat beta_path(p, n_lambda, fill::zeros);
-//   arma::vec beta(p, fill::zeros);
-//   arma::vec beta_old(p);
-//   
-//   arma::vec XtX_diag = XtX.diag();
-//   
-//   for (int lambda_idx = 0; lambda_idx < n_lambda; ++lambda_idx) {
-//     double lambda = lambda_seq[lambda_idx];
-//     
-//     for (int iter = 0; iter < max_iter; ++iter) {
-//       beta_old = beta;
-//       
-//       for (int j = 0; j < p; ++j) {
-//         double r_j = XtY(j);
-//         
-//         if (j > 0) {
-//           r_j -= dot(XtX.row(j).subvec(0, j - 1), beta.subvec(0, j - 1));
-//         }
-//         if (j < p - 1) {
-//           r_j -= dot(XtX.row(j).subvec(j + 1, p - 1), beta.subvec(j + 1, p - 1));
-//         }
-//         
-//         beta(j) = soft_threshold(r_j, lambda) / XtX_diag(j);
-//       }
-//       
-//       if (max(abs(beta - beta_old)) < tolerance) {
-//         break;
-//       }
-//     }
-//     
-//     beta_path.col(lambda_idx) = beta;
-//   }
-//   
-//   return beta_path;
-// }

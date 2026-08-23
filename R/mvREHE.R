@@ -38,15 +38,25 @@ mvREHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, tolerance = 1
   difference = numeric(max_iter)
   loss_history = if (track_loss) numeric(max_iter) else NULL
 
-  if (!is.null(w_columns)) {
-    Y = t(t(Y) * sqrt(w_columns))
+  if (is.null(w_columns) & ncol(Y) > 1) {
+    vars = matrixStats::colVars(Y)
+    w_columns = 1 / vars
+    w_columns[vars < 1e-10] = 1
   }
 
+  if (is.null(w_columns) & ncol(Y) > 1) {
+    Y = t(t(Y) * sqrt(w_columns))
+  }
   highdim = q > n
   if (highdim) {
     s = svd(Y)
     Y = Y %*% s$v
     q = ncol(Y)
+    if (!is.null(Sigma_init_list) && is.matrix(Sigma_init_list[[1]])){
+      for (k in 1:length(Sigma_init_list)) {
+        Sigma_init_list[[k]] = t(s$v) %*% Sigma_init_list[[k]] %*% s$v
+      }
+    }
   }
 
   if (is.null(Sigma_init_list)) {
@@ -123,7 +133,7 @@ mvREHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, tolerance = 1
 
   } else {
 
-    if (!is.null(w_columns)) {
+    if (is.null(w_columns) & ncol(Y) > 1) {
       Sigma_list = lapply(Sigma_list, function(Sigma) diag(1 / sqrt(w_columns)) %*% Sigma %*% diag(1 / sqrt(w_columns)))
     }
 

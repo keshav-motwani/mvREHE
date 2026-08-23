@@ -2,8 +2,7 @@ library(R.matlab)
 library(readr)
 library(Matrix)
 
-
-DATA_PATH = "Data_YL/"
+DATA_PATH = "data"
 
 groups = read.csv(file.path(DATA_PATH, "communities_aparc.csv"))
 groups = groups[order(groups$id_ROI), ][, 3]
@@ -15,13 +14,25 @@ id_subjects = as.character(kinship$K[[2]])
 rownames(K_G) = id_subjects;
 colnames(K_G) = id_subjects;
 
+read_nifti = function(path) {
+  ts = RNifti::readNifti(path)
+  ts = drop(ts)
+  ts = matrix(ts, nrow = nrow(ts), ncol = ncol(ts))
+  return(ts)
+}
+
+fmri_sessions = c("rfMRI_REST1_LR", "rfMRI_REST1_RL", "rfMRI_REST2_LR", "rfMRI_REST2_RL")
+
 fun_connectomes = list()
 fun_connectomes_averaged = list()
-session = 1
 for (i in seq(id_subjects)) {
-  ts = as.matrix(read_csv(file.path(DATA_PATH, paste0('3T_HCP1200_aparc_ts2/', id_subjects[i], '_', session, '.csv')), col_names = F, col_types = cols()))
-  fun_connectomes[[i]] = cor(ts)
-  fun_connectomes_averaged[[i]] = cor(ts %*% avg_matrix)
+  cors = lapply(fmri_sessions, function(sess) {
+    ts = read_nifti(file.path(DATA_PATH, "1003.pt.TS.aparc", paste0(id_subjects[i], '_pt'),
+                              paste0(sess, '_Atlas_MSMAll_hp2000_clean.aparc.ptseries.nii')))
+    list(cor(ts), cor(ts %*% avg_matrix))
+  })
+  fun_connectomes[[i]] = Reduce("+", lapply(cors, `[[`, 1)) / length(cors)
+  fun_connectomes_averaged[[i]] = Reduce("+", lapply(cors, `[[`, 2)) / length(cors)
 }
 names(fun_connectomes) = id_subjects
 names(fun_connectomes_averaged) = id_subjects
@@ -32,7 +43,7 @@ for (i in seq(id_subjects)) {
   tryCatch({
     idx_ctx = c(1:3,5:35,36:38,40:70) # indices of valid cortical regions
     str_raw = read_delim(file.path(DATA_PATH, paste0('HCP1200_desikan_str/sub-',
-                                                     id_subjects[i], '_ses-', session, '_run-1_dwi_Desikan_space-MNI152NLin6_res-1x1x1_connectome.csv')), col_names = F, col_types = cols(), delim = " ")
+                                                     id_subjects[i], '_ses-1_run-1_dwi_Desikan_space-MNI152NLin6_res-1x1x1_connectome.csv')), col_names = F, col_types = cols(), delim = " ")
     str_raw_spmat = sparseMatrix(str_raw$X1, str_raw$X2, x = str_raw$X3, symmetric = TRUE)
     str_connectomes_full = as.matrix(str_raw_spmat)
     str_connectomes[[i]] = str_connectomes_full[idx_ctx, idx_ctx]
@@ -82,4 +93,4 @@ data = list(
   groups = groups
 )
 
-saveRDS(data, file.path(DATA_PATH, "clean_data.rds"))
+saveRDS(data, file.path(DATA_PATH, "ica_clean_data.rds"))
