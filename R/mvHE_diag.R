@@ -26,10 +26,10 @@ mvHE_diag = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, truncate =
   # Diagonal of each D_k (replaces full D_k %*% Y)
   d_list = lapply(D_list, function(D) if (sparse) Matrix::diag(D) else diag(D))
 
-  # Diagonal of W_row_pairs (replaces full W * D product)
-  w_diag = if (!is.null(W_row_pairs)) {
-    if (sparse) Matrix::diag(W_row_pairs) else diag(W_row_pairs)
-  } else rep(1.0, n)
+  # Per-SNP weights: either a numeric vector, or the diagonal of a W matrix
+  w_diag = if (is.null(W_row_pairs)) rep(1.0, n)
+  else if (is.null(dim(W_row_pairs))) W_row_pairs
+  else if (sparse) Matrix::diag(W_row_pairs) else diag(W_row_pairs)
 
   # G_k = Y' diag(w * d_k) Y
   G_list = lapply(d_list, function(d) crossprod(Y, (w_diag * d) * Y))
@@ -107,9 +107,9 @@ mvREHE_diag = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL,
   }
 
   d_list = lapply(D_list, function(D) if (sparse) Matrix::diag(D) else diag(D))
-  w_diag = if (!is.null(W_row_pairs)) {
-    if (sparse) Matrix::diag(W_row_pairs) else diag(W_row_pairs)
-  } else rep(1.0, n)
+  w_diag = if (is.null(W_row_pairs)) rep(1.0, n)
+  else if (is.null(dim(W_row_pairs))) W_row_pairs
+  else if (sparse) Matrix::diag(W_row_pairs) else diag(W_row_pairs)
 
   G_list = lapply(d_list, function(d) crossprod(Y, (w_diag * d) * Y))
 
