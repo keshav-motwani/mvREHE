@@ -4,10 +4,7 @@
 \alias{mvHE}
 \title{mvHE}
 \usage{
-mvHE(Y, D_list, truncate = TRUE)
-}
-\arguments{
-\item{D_list}{}
+mvHE(Y, D_list, W_row_pairs = NULL, w_columns = NULL, truncate = TRUE)
 }
 \description{
 mvHE

@@ -12,11 +12,10 @@ mvREHE(
   tolerance = 1e-06,
   max_iter = 1000,
   return_full = TRUE,
-  Sigma_init_list = NULL
+  Sigma_init_list = NULL,
+  track_loss = FALSE,
+  truncate = TRUE
 )
-}
-\arguments{
-\item{col_indices}{}
 }
 \description{
 mvREHE

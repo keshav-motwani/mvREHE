@@ -9,18 +9,10 @@ mvREHE_SNP(
   D_list,
   GWAS_N,
   M = NULL,
-  init_h2 = 0.1,
-  init_rho_g = 0.3,
-  init_rho_e = 0.05,
-  refit = TRUE,
-  tolerance = 1e-06,
-  max_iter = 1000,
-  return_full = TRUE,
-  Sigma_init_list = NULL
+  init = c("mvHE", "mvREHE"),
+  truncate = TRUE,
+  cross_snp = FALSE
 )
-}
-\arguments{
-\item{col_indices}{}
 }
 \description{
 mvREHE_SNP

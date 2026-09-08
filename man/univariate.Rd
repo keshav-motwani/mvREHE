@@ -6,9 +6,6 @@
 \usage{
 univariate(Y, D_list, estimator)
 }
-\arguments{
-\item{estimator}{}
-}
 \description{
 Perform massively univariate analysis
 }
