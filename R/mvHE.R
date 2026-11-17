@@ -63,7 +63,7 @@ mvHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, truncate = TRUE
 
   if (highdim) {
     if (!is.null(w_columns)) {
-      V = t(t(s$v) / sqrt(w_columns))
+      V = s$v / sqrt(w_columns)
     } else {
       V = s$v
     }

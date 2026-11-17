@@ -44,7 +44,7 @@ mvREHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, tolerance = 1
     w_columns[vars < 1e-10] = 1
   }
 
-  if (is.null(w_columns) & ncol(Y) > 1) {
+  if (!is.null(w_columns)) {
     Y = t(t(Y) * sqrt(w_columns))
   }
   highdim = q > n
@@ -123,7 +123,7 @@ mvREHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, tolerance = 1
     result$V = s$v
 
     if (!is.null(w_columns)) {
-      result$V = t(t(result$V) / sqrt(w_columns))
+      result$V = result$V / sqrt(w_columns)
     }
 
     if (return_full) {
@@ -133,8 +133,9 @@ mvREHE = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, tolerance = 1
 
   } else {
 
-    if (is.null(w_columns) & ncol(Y) > 1) {
-      Sigma_list = lapply(Sigma_list, function(Sigma) diag(1 / sqrt(w_columns)) %*% Sigma %*% diag(1 / sqrt(w_columns)))
+    if (!is.null(w_columns)) {
+      w_inv_sqrt = 1 / sqrt(w_columns)
+      Sigma_list = lapply(Sigma_list, function(Sigma) Sigma * outer(w_inv_sqrt, w_inv_sqrt))
     }
 
     result$Sigma_hat = Sigma_list

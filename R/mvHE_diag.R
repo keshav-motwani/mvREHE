@@ -55,7 +55,7 @@ mvHE_diag = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL, truncate =
   }
 
   if (highdim) {
-    V = if (!is.null(w_columns)) t(t(s$v) / sqrt(w_columns)) else s$v
+    V = if (!is.null(w_columns)) s$v / sqrt(w_columns) else s$v
     Sigma_hat = lapply(Sigma_hat, function(S) V %*% S %*% t(V))
   } else if (!is.null(w_columns)) {
     W_inv = 1 / sqrt(w_columns)
@@ -150,7 +150,7 @@ mvREHE_diag = function(Y, D_list, W_row_pairs = NULL, w_columns = NULL,
 
   if (highdim) {
     result$Sigma_hat = Sigma_list
-    result$V = if (!is.null(w_columns)) t(t(s$v) / sqrt(w_columns)) else s$v
+    result$V = if (!is.null(w_columns)) s$v / sqrt(w_columns) else s$v
     if (return_full) {
       result$Sigma_hat = lapply(Sigma_list, function(S) result$V %*% S %*% t(result$V))
       result$V = NULL
